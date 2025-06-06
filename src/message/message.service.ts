@@ -109,4 +109,13 @@ export class MessageService {
             throw error;
         }
     }
+
+    async findByContent(content: string): Promise<Message | null> {
+        try {
+            return await this.messageRepository.findOne({ where: { content } });
+        } catch (error) {
+            this.logger.error('Mesaj içeriğine göre arama yapılırken hata:', error);
+            throw error;
+        }
+    }
 }

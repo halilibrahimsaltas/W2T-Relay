@@ -70,4 +70,33 @@ export class LinkConversionService {
             return originalUrl;
         }
     }
+
+    async convertLink(url: string): Promise<string> {
+        try {
+            if (!url) {
+                throw new Error('URL boş olamaz');
+            }
+
+            const offerId = getOfferIdFromWebsite(url);
+            if (!offerId) {
+                this.logger.warn(`Desteklenmeyen website: ${url}`);
+                return url;
+            }
+
+            const apiUrl = buildApiRequestUrl(url, offerId, this.configService);
+            const requestBody = generateHepsiburadaRequestBody(url);
+
+            const response = await this.hepsiburadaClient.post(apiUrl, requestBody);
+            
+            if (response.data?.data?.trackingUrl) {
+                return response.data.data.trackingUrl;
+            }
+
+            this.logger.warn('Tracking URL alınamadı, orijinal URL döndürülüyor');
+            return url;
+        } catch (error) {
+            this.logger.error('Link dönüştürme hatası:', error);
+            return url;
+        }
+    }
 } 

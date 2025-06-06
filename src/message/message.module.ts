@@ -1,16 +1,27 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { HttpModule } from '@nestjs/axios';
+import { ConfigModule } from '@nestjs/config';
 import { MessageService } from './message.service';
 import { MessageController } from './message.controller';
 import { Message } from './entities/message.entity';
 import { SeleniumService } from './selenium/selenium.service';
-import { LinkConversionService } from './link-conversion.service';
 import { ForwardService } from './forward.service';
+import { LinkConversionService } from './link-conversion.service';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Message])],
+    imports: [
+        TypeOrmModule.forFeature([Message]),
+        HttpModule,
+        ConfigModule
+    ],
     controllers: [MessageController],
-    providers: [MessageService, SeleniumService, LinkConversionService, ForwardService],
-    exports: [MessageService, SeleniumService, LinkConversionService, ForwardService]
+    providers: [
+        MessageService,
+        SeleniumService,
+        ForwardService,
+        LinkConversionService
+    ],
+    exports: [MessageService]
 })
 export class MessageModule {}

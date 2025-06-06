@@ -37,4 +37,13 @@ export const generateHepsiburadaRequestBody = (originalUrl: string): string => {
         webUrl: originalUrl,
         title: 'HBCV0000333333'
     });
+};
+
+export const createHepsiburadaRequest = (url: string) => {
+    return {
+        url,
+        locale: 'tr-TR',
+        affiliateId: 'w2t-relay',
+        adgroupId: 'w2t-relay',
+    };
 }; 

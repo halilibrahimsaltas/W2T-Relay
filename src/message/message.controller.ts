@@ -2,9 +2,8 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, NotFoundExcep
 import { MessageService } from './message.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
-import { Message } from './entities/message.entity';
 
-@Controller('api/messages')
+@Controller('messages')
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 

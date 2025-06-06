@@ -1,18 +1,11 @@
-
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateMessageDto {
-    
-    name: string;
+    @IsString()
+    @IsNotEmpty()
+    content: string;
 
-    
-    price: string;
-
-   
-    imageUrl: string;
-
-   
-    pageUrl: string;
-
-  
-    sender: string;
+    @IsString()
+    @IsOptional()
+    sender?: string;
 }

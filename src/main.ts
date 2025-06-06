@@ -8,11 +8,7 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
-  // Global prefix
-  app.setGlobalPrefix('api');
 
-  // CORS ayarları
-  app.enableCors();
 
   const port = process.env.PORT || 3000;
   await app.listen(port);

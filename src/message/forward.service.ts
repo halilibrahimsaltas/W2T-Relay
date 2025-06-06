@@ -7,11 +7,16 @@ import { firstValueFrom } from 'rxjs';
 export class ForwardService {
     private readonly logger = new Logger(ForwardService.name);
     private readonly TELEGRAM_API_URL = 'https://api.telegram.org/bot';
+    private readonly telegramBotToken: string;
+    private readonly telegramChatId: string;
 
     constructor(
         private readonly httpService: HttpService,
         private readonly configService: ConfigService,
-    ) {}
+    ) {
+        this.telegramBotToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+        this.telegramChatId = this.configService.get<string>('TELEGRAM_CHAT_ID');
+    }
 
     /**
      * Telegram'a mesaj gönderir (HTML parse mode).
@@ -129,6 +134,23 @@ export class ForwardService {
             await this.sendToAllChats(content);
         } catch (error) {
             this.logger.error('[HATA] Normal mesaj gönderme hatası:', error);
+            throw error;
+        }
+    }
+
+    async forwardToTelegram(message: string): Promise<void> {
+        try {
+            const url = `https://api.telegram.org/bot${this.telegramBotToken}/sendMessage`;
+            const data = {
+                chat_id: this.telegramChatId,
+                text: message,
+                parse_mode: 'HTML',
+            };
+
+            await firstValueFrom(this.httpService.post(url, data));
+            this.logger.log('Mesaj Telegram\'a başarıyla iletildi');
+        } catch (error) {
+            this.logger.error('Telegram\'a mesaj iletirken hata:', error);
             throw error;
         }
     }
