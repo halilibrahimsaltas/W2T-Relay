@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, NotFoundException } from '@nestjs/common';
 import { MessageService } from './message.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { Message } from './entities/message.entity';
 
-@Controller('message')
+@Controller('api/messages')
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
@@ -13,13 +14,26 @@ export class MessageController {
   }
 
   @Get()
-  findAll() {
-    return this.messageService.findAll();
+  async findAll() {
+    // ID'ye göre azalan sırada tüm mesajları getir
+    return this.messageService.findAll({ order: { id: 'DESC' } });
+  }
+
+  @Get('search')
+  async searchMessages(@Query('q') query: string) {
+    if (!query) {
+      throw new NotFoundException('Arama sorgusu boş olamaz');
+    }
+    return this.messageService.searchByContent(query);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.messageService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    const message = await this.messageService.findOne(+id);
+    if (!message) {
+      throw new NotFoundException(`ID: ${id} olan mesaj bulunamadı`);
+    }
+    return message;
   }
 
   @Patch(':id')

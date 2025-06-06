@@ -6,6 +6,7 @@ import { MessageService } from '../message.service';
 import { LinkConversionService } from '../link-conversion.service';
 import { ForwardService } from '../forward.service';
 import { ProductInfo, isValidProductInfo, buildMessageTemplate, scrapeProductInfo } from '../utils/product.utils';
+import * as chrome from 'chromedriver';
 
 @Injectable()
 export class SeleniumService implements OnModuleInit {
@@ -30,17 +31,42 @@ export class SeleniumService implements OnModuleInit {
             options.addArguments('--headless');
             options.addArguments('--no-sandbox');
             options.addArguments('--disable-dev-shm-usage');
+            options.addArguments('--disable-gpu');
+            options.addArguments('--window-size=1920,1080');
+            options.addArguments('--disable-notifications');
+            options.addArguments('--disable-extensions');
+            options.addArguments('--disable-infobars');
+            options.addArguments('--disable-popup-blocking');
+            options.addArguments('--disable-blink-features=AutomationControlled');
+            options.addArguments('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
+            // Chrome WebDriver'ı başlat
+            const service = new chrome.ServiceBuilder(chrome.path).build();
+            
             this.driver = await new Builder()
                 .forBrowser('chrome')
                 .setChromeOptions(options)
+                .setChromeService(service)
                 .build();
 
             await this.driver.get('https://web.whatsapp.com');
             this.isInitialized = true;
             this.logger.log('[BILGI] Selenium başarıyla başlatıldı ve WhatsApp Web açıldı.');
+            
+            // QR kodu okutma süresi
+            this.logger.log('[BILGI] Lütfen WhatsApp Web QR kodunu telefonunuzdan okutun (60 saniye süreniz var)');
+            await new Promise(resolve => setTimeout(resolve, 60000));
+            
         } catch (error) {
             this.logger.error('[HATA] Selenium başlatma hatası:', error);
+            if (this.driver) {
+                try {
+                    await this.driver.quit();
+                } catch (quitError) {
+                    this.logger.error('[HATA] Driver kapatma hatası:', quitError);
+                }
+            }
+            this.isInitialized = false;
         }
     }
 

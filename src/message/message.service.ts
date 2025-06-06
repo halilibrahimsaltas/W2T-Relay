@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import { Message } from './entities/message.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -25,9 +25,11 @@ export class MessageService {
         }
     }
 
-    async findAll() {
+    async findAll(options?: { order?: { [key: string]: 'ASC' | 'DESC' } }) {
         try {
-            return await this.messageRepository.find();
+            return await this.messageRepository.find({
+                order: options?.order || { id: 'DESC' }
+            });
         } catch (error) {
             this.logger.error('[HATA] Mesajları getirme hatası:', error);
             throw error;
@@ -36,7 +38,11 @@ export class MessageService {
 
     async findOne(id: number) {
         try {
-            return await this.messageRepository.findOne({ where: { id } });
+            const message = await this.messageRepository.findOne({ where: { id } });
+            if (!message) {
+                throw new NotFoundException(`ID: ${id} olan mesaj bulunamadı`);
+            }
+            return message;
         } catch (error) {
             this.logger.error('[HATA] Mesaj getirme hatası:', error);
             throw error;
@@ -45,8 +51,9 @@ export class MessageService {
 
     async update(id: number, updateMessageDto: UpdateMessageDto) {
         try {
-            await this.messageRepository.update(id, updateMessageDto);
-            return await this.findOne(id);
+            const message = await this.findOne(id);
+            Object.assign(message, updateMessageDto);
+            return await this.messageRepository.save(message);
         } catch (error) {
             this.logger.error('[HATA] Mesaj güncelleme hatası:', error);
             throw error;
@@ -56,8 +63,7 @@ export class MessageService {
     async remove(id: number) {
         try {
             const message = await this.findOne(id);
-            await this.messageRepository.remove(message);
-            return message;
+            return await this.messageRepository.remove(message);
         } catch (error) {
             this.logger.error('[HATA] Mesaj silme hatası:', error);
             throw error;
@@ -86,6 +92,20 @@ export class MessageService {
             return await this.messageRepository.save(message);
         } catch (error) {
             this.logger.error('[HATA] Mesaj kaydetme hatası:', error);
+            throw error;
+        }
+    }
+
+    async searchByContent(query: string) {
+        try {
+            return await this.messageRepository.find({
+                where: {
+                    content: Like(`%${query}%`)
+                },
+                order: { id: 'DESC' }
+            });
+        } catch (error) {
+            this.logger.error('[HATA] İçerik arama hatası:', error);
             throw error;
         }
     }

@@ -18,7 +18,7 @@ export class ForwardService {
      */
     private async sendToTelegram(chatId: string, messageText: string): Promise<void> {
         try {
-            const token = this.configService.get<string>('telegram.bot.token');
+            const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
             if (!token) {
                 this.logger.error('[HATA] Telegram bot token tanımlanmamış!');
                 return;
@@ -41,96 +41,7 @@ export class ForwardService {
 
         } catch (error) {
             this.logger.error('[HATA] Telegram mesaj gönderme hatası:', error);
-        }
-    }
-
-    /**
-     * Tüm chat ID'lere mesaj gönderir
-     */
-    private async sendToAllChats(messageText: string): Promise<void> {
-        const chatIdsStr = this.configService.get<string>('telegram.bot.chatIds');
-        if (!chatIdsStr) {
-            this.logger.error('[HATA] Telegram chat ID\'leri tanımlanmamış!');
-            return;
-        }
-
-        const chatIds = chatIdsStr.split(',');
-        for (const chatId of chatIds) {
-            const trimmedChatId = chatId.trim();
-            if (trimmedChatId) {
-                try {
-                    await this.sendToTelegram(trimmedChatId, messageText);
-                } catch (error) {
-                    this.logger.error(`[HATA] Chat ID ${trimmedChatId} için mesaj gönderme hatası:`, error);
-                }
-            }
-        }
-    }
-
-    /**
-     * WhatsApp mesajını Telegram'a atarken satır sonlarını \n ile korur.
-     */
-    async forwardMessageWithImage(sender: string, imageUrl: string, caption: string): Promise<void> {
-        try {
-            const chatIdsStr = this.configService.get<string>('telegram.bot.chatIds');
-            if (!chatIdsStr) {
-                this.logger.error('[HATA] Telegram chat ID\'leri tanımlanmamış!');
-                return;
-            }
-
-            const chatIds = chatIdsStr.split(',');
-            for (const chatId of chatIds) {
-                const trimmedChatId = chatId.trim();
-                if (trimmedChatId) {
-                    try {
-                        const token = this.configService.get<string>('telegram.bot.token');
-                        if (!token) {
-                            this.logger.error('[HATA] Telegram bot token tanımlanmamış!');
-                            return;
-                        }
-
-                        const formattedChatId = trimmedChatId.startsWith('-') ? trimmedChatId : `-${trimmedChatId}`;
-                        const url = `${this.TELEGRAM_API_URL}${token}/sendPhoto`;
-
-                        const body: any = {
-                            chat_id: formattedChatId,
-                            photo: imageUrl
-                        };
-
-                        if (caption) {
-                            body.caption = caption;
-                            body.parse_mode = 'HTML';
-                        }
-
-                        const response = await firstValueFrom(
-                            this.httpService.post(url, body)
-                        );
-
-                        this.logger.log(`[BASARILI] Fotoğraf gönderildi - Chat ID: ${trimmedChatId}. Yanıt: ${JSON.stringify(response.data)}`);
-
-                    } catch (error) {
-                        this.logger.error(`[HATA] Chat ID ${trimmedChatId} için fotoğraf gönderme hatası:`, error);
-                        try {
-                            await this.sendToTelegram(trimmedChatId, caption);
-                        } catch (ex) {
-                            this.logger.error(`[HATA] Chat ID ${trimmedChatId} için normal mesaj gönderme hatası:`, ex);
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            this.logger.error('[HATA] Mesaj yönlendirme hatası:', error);
-        }
-    }
-
-    /**
-     * Normal mesaj gönderir
-     */
-    async forwardMessage(sender: string, content: string): Promise<void> {
-        try {
-            await this.sendToAllChats(content);
-        } catch (error) {
-            this.logger.error('[HATA] Normal mesaj gönderme hatası:', error);
+            throw error;
         }
     }
 
@@ -139,11 +50,17 @@ export class ForwardService {
      */
     private async sendPhotoToTelegram(chatId: string, photoUrl: string, caption: string): Promise<void> {
         try {
-            const token = this.configService.get<string>('telegram.bot.token');
+            const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+            if (!token) {
+                this.logger.error('[HATA] Telegram bot token tanımlanmamış!');
+                return;
+            }
+
+            const formattedChatId = chatId.startsWith('-') ? chatId : `-${chatId}`;
             const url = `${this.TELEGRAM_API_URL}${token}/sendPhoto`;
 
             const body: any = {
-                chat_id: chatId,
+                chat_id: formattedChatId,
                 photo: photoUrl,
                 parse_mode: 'HTML'
             };
@@ -156,28 +73,63 @@ export class ForwardService {
                 this.httpService.post(url, body)
             );
 
-            this.logger.log(`[BILGI] Gönderilen JSON: ${JSON.stringify(body)}`);
-            this.logger.log(`[BILGI] API Yanıtı: ${JSON.stringify(response.data)}`);
+            this.logger.log(`[BILGI] Fotoğraf gönderildi - Chat ID: ${formattedChatId}. Yanıt: ${JSON.stringify(response.data)}`);
 
         } catch (error) {
-            this.logger.error('[HATA] JSON dönüşüm veya gönderim hatası:', error);
-            await this.sendToTelegram(chatId, caption);
+            this.logger.error('[HATA] Fotoğraf gönderme hatası:', error);
+            // Fotoğraf gönderimi başarısız olursa, sadece caption'ı göndermeyi dene
+            if (caption) {
+                await this.sendToTelegram(chatId, caption);
+            }
+            throw error;
         }
     }
 
     /**
-     * Tüm chat ID'lere fotoğraf gönderir
+     * Tüm chat ID'lere mesaj gönderir
      */
-    private async sendPhotoToAllChats(photoUrl: string, caption: string): Promise<void> {
-        const chatIdsStr = this.configService.get<string>('telegram.bot.chatIds');
-        if (!chatIdsStr) {
-            this.logger.error('[HATA] Telegram chat ID\'leri tanımlanmamış!');
+    private async sendToAllChats(messageText: string): Promise<void> {
+        const chatId = this.configService.get<string>('TELEGRAM_CHAT_ID');
+        if (!chatId) {
+            this.logger.error('[HATA] Telegram chat ID tanımlanmamış!');
             return;
         }
 
-        const chatIds = chatIdsStr.split(',');
-        for (const chatId of chatIds) {
-            await this.sendPhotoToTelegram(chatId.trim(), photoUrl, caption);
+        try {
+            await this.sendToTelegram(chatId, messageText);
+        } catch (error) {
+            this.logger.error(`[HATA] Chat ID ${chatId} için mesaj gönderme hatası:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * WhatsApp mesajını Telegram'a atarken satır sonlarını \n ile korur.
+     */
+    async forwardMessageWithImage(sender: string, imageUrl: string, caption: string): Promise<void> {
+        try {
+            const chatId = this.configService.get<string>('TELEGRAM_CHAT_ID');
+            if (!chatId) {
+                this.logger.error('[HATA] Telegram chat ID tanımlanmamış!');
+                return;
+            }
+
+            await this.sendPhotoToTelegram(chatId, imageUrl, caption);
+        } catch (error) {
+            this.logger.error('[HATA] Mesaj yönlendirme hatası:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Normal mesaj gönderir
+     */
+    async forwardMessage(sender: string, content: string): Promise<void> {
+        try {
+            await this.sendToAllChats(content);
+        } catch (error) {
+            this.logger.error('[HATA] Normal mesaj gönderme hatası:', error);
+            throw error;
         }
     }
 }
