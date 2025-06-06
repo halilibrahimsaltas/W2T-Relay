@@ -11,6 +11,7 @@ export class SeleniumService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger(SeleniumService.name);
     private driver: WebDriver;
     private isRunning = false;
+    private isInitialized = false;
     private readonly CHECK_INTERVAL = 5000; // 5 saniye
     private readonly MAX_MESSAGES = 3; // Son 3 mesajı kontrol et
     private readonly WAIT_TIMEOUT = 60000; // 60 saniye
@@ -34,43 +35,50 @@ export class SeleniumService implements OnModuleInit, OnModuleDestroy {
 
     private async initializeDriver() {
         try {
+            // Chrome ayarlarını yapılandır
             const options = new Options();
             
-            // Chrome ayarları
+            // Headless modu devre dışı bırak
+            options.addArguments('--no-headless');
+            options.addArguments('--disable-gpu');
+            options.addArguments('--disable-software-rasterizer');
+            
+            // Chrome'u görünür yap
             options.addArguments('--start-maximized');
+            options.addArguments('--window-size=1920,1080');
+            options.addArguments('--window-position=0,0');
+            
+            // Diğer ayarlar
             options.addArguments('--disable-notifications');
             options.addArguments('--disable-popup-blocking');
             options.addArguments('--disable-infobars');
             options.addArguments('--disable-extensions');
-            options.addArguments('--disable-gpu');
             options.addArguments('--no-sandbox');
             options.addArguments('--disable-dev-shm-usage');
             options.addArguments('--disable-blink-features=AutomationControlled');
-            
-            // User agent ayarı
             options.addArguments('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
+            // Chrome WebDriver'ı başlat
             this.driver = await new Builder()
                 .forBrowser('chrome')
                 .setChromeOptions(options)
                 .build();
 
-            this.logger.log('Chrome WebDriver başarıyla başlatıldı');
+            // WhatsApp Web'e git
+            await this.driver.get('https://web.whatsapp.com');
+            this.isInitialized = true;
+            this.logger.log('[BILGI] Selenium başarıyla başlatıldı ve WhatsApp Web açıldı.');
         } catch (error) {
-            this.logger.error('Chrome WebDriver başlatılırken hata:', error);
+            this.logger.error('[HATA] Selenium başlatma hatası:', error);
             throw error;
         }
     }
 
     private async startMonitoring() {
-        if (this.isRunning) return;
+        if (this.isRunning || !this.isInitialized) return;
         this.isRunning = true;
 
         try {
-            // WhatsApp Web'e git
-            await this.driver.get('https://web.whatsapp.com');
-            this.logger.log('WhatsApp Web açıldı, QR kodu bekleniyor...');
-
             // QR kodunun okunmasını bekle
             await this.driver.wait(
                 until.elementLocated(By.css('div[data-testid="chat-list"]')),

@@ -5,9 +5,10 @@ import { ConfigModule } from '@nestjs/config';
 import { MessageService } from './message.service';
 import { MessageController } from './message.controller';
 import { Message } from './entities/message.entity';
-import { SeleniumService } from './selenium/selenium.service';
 import { ForwardService } from './forward.service';
 import { LinkConversionService } from './link-conversion.service';
+import { SeleniumService } from './selenium/selenium.service';
+import { SeleniumServiceStarter } from './selenium/selenium-starter.service';
 
 @Module({
     imports: [
@@ -18,9 +19,10 @@ import { LinkConversionService } from './link-conversion.service';
     controllers: [MessageController],
     providers: [
         MessageService,
-        SeleniumService,
         ForwardService,
-        LinkConversionService
+        LinkConversionService,
+        SeleniumService,
+        SeleniumServiceStarter
     ],
     exports: [MessageService]
 })
