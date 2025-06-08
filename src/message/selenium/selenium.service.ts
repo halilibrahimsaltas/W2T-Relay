@@ -107,47 +107,6 @@ export class SeleniumService implements OnModuleDestroy {
         }
     }
 
-    private async checkNewMessages() {
-        try {
-            // Son mesajları al
-            const messages = await this.driver.findElements(
-                By.css('div[data-testid="msg-container"]')
-            );
-
-            // Son MAX_MESSAGES kadar mesajı kontrol et
-            const recentMessages = messages.slice(-this.MAX_MESSAGES);
-
-            for (const message of recentMessages) {
-                try {
-                    const content = await message.getText();
-                    const isProcessed = await this.isAlreadyProcessedLink(content);
-
-                    if (!isProcessed) {
-                        // Mesajı işle ve kaydet
-                        const convertedContent = await this.linkConversionService.convertLink(content);
-                        await this.messageService.create({ content: convertedContent });
-                        
-                        // Telegram'a ilet
-                        await this.forwardService.forwardToTelegram(convertedContent);
-                    }
-                } catch (error) {
-                    this.logger.error('Mesaj işlenirken hata:', error);
-                }
-            }
-        } catch (error) {
-            this.logger.error('Mesajlar kontrol edilirken hata:', error);
-        }
-    }
-
-    private async isAlreadyProcessedLink(content: string): Promise<boolean> {
-        try {
-            const existingMessage = await this.messageService.findByContent(content);
-            return !!existingMessage;
-        } catch (error) {
-            this.logger.error('Mesaj kontrolü sırasında hata:', error);
-            return false;
-        }
-    }
     private async scrapeProductInfo(link: string): Promise<ProductInfo> {
         // product.utils.ts fonksiyonunu kullan
         return await scrapeProductInfo(this.driver, link);  
@@ -259,15 +218,15 @@ export class SeleniumService implements OnModuleDestroy {
     let retryCount = 0;
     
     while (retryCount < this.MAX_RETRIES) {
-        try {
-            // Kısa bekleme: Kanal içeriği yüklensin
-            await this.driver.wait(
-                until.elementLocated(By.css("div[role='application']")),
+    try {
+        // Kısa bekleme: Kanal içeriği yüklensin
+        await this.driver.wait(
+            until.elementLocated(By.css("div[role='application']")),
                 this.CHANNEL_CHECK_TIMEOUT
-            );
+        );
 
-            // Tüm mesajları bul
-            const messages: WebElement[] = await this.driver.findElements(By.css("div[role='row']"));
+        // Tüm mesajları bul
+        const messages: WebElement[] = await this.driver.findElements(By.css("div[role='row']"));
 
             // Eğer mesaj yoksa veya çok az mesaj varsa, bir sonraki kanala geç
             if (messages.length === 0) {
@@ -275,32 +234,32 @@ export class SeleniumService implements OnModuleDestroy {
                 return;
             }
 
-            // Son 3 mesajı al
-            const startIndex = Math.max(0, messages.length - 3);
-            const lastThreeMessages = messages.slice(startIndex, messages.length);
+        // Son 3 mesajı al
+        const startIndex = Math.max(0, messages.length - 3);
+        const lastThreeMessages = messages.slice(startIndex, messages.length);
 
-            for (const message of lastThreeMessages) {
-                try {
-                    const msgType = await this.determineMessageType(message);
-                    if (msgType === "text") {
-                        const textElement = await message.findElement(By.css("span.selectable-text"));
-                        const msgContent = await textElement.getText();
-                        const sender = await this.getSenderFromMessage(message);
+        for (const message of lastThreeMessages) {
+            try {
+                const msgType = await this.determineMessageType(message);
+                if (msgType === "text") {
+                    const textElement = await message.findElement(By.css("span.selectable-text"));
+                    const msgContent = await textElement.getText();
+                    const sender = await this.getSenderFromMessage(message);
 
-                        await this.processIncomingMessage(
-                            msgContent,
-                            sender ? sender : channelName
-                        );
-                    }
-                } catch (e) {
-                    this.logger.error("[HATA] Mesaj işleme hatası: ", e);
+                    await this.processIncomingMessage(
+                        msgContent,
+                        sender ? sender : channelName
+                    );
                 }
+            } catch (e) {
+                    this.logger.error("[HATA] Mesaj işleme hatası: ", e);
             }
+        }
             
             // Başarılı işlem sonrası döngüden çık
             return;
             
-        } catch (e) {
+    } catch (e) {
             retryCount++;
             this.logger.error(`[HATA] fetchMessagesFromChannel hatası (Deneme ${retryCount}/${this.MAX_RETRIES}): `, e);
             
@@ -371,13 +330,15 @@ export class SeleniumService implements OnModuleDestroy {
 
     private async processIncomingMessage(whatsappText: string, sender: string): Promise<void> {
         if (!whatsappText || whatsappText.trim().length === 0) {
-            this.logger.warn('[UYARI] Bos mesaj alindi');
+            this.logger.warn('[UYARI] Boş mesaj alındı');
             return;
         }
 
         const links: string[] = await this.extractLinks(whatsappText);
         if (links.length === 0) {
-            this.logger.debug('[BILGI] Mesajda link bulunamadi');
+            this.logger.debug('[BILGI] Mesajda link bulunamadı');
+            // Sadece metin mesajını kaydedebiliriz, eğer ProductInfo içermiyorsa
+            // await this.messageService.saveMessage(whatsappText, null, sender);
             return;
         }
 
@@ -386,15 +347,9 @@ export class SeleniumService implements OnModuleDestroy {
         for (const link of links) {
             let originalWindow: string | null = null;
             try {
-                const alreadyProcessed = await this.isAlreadyProcessedLink(link);
-                if (alreadyProcessed) {
-                    this.logger.log(`[BILGI] Bu link daha once islenmistir: ${link}`);
-                    continue;
-                }
-
-                originalWindow = await this.processLink(link, sender);
+                originalWindow = await this.processLink(link, whatsappText, sender); // Ham mesajı ve göndericiyi processLink'e aktar
             } catch (e) {
-                this.logger.error(`[HATA] Link isleme hatasi: ${(e as Error).message} - Link: ${link}`);
+                this.logger.error(`[HATA] Link işleme hatası: ${(e as Error).message} - Link: ${link}`);
             } finally {
                 await this.cleanupBrowser(originalWindow);
             }
@@ -416,30 +371,32 @@ export class SeleniumService implements OnModuleDestroy {
         return links;
     }
 
-    private async processProductInfo(info: ProductInfo, sender: string): Promise<void> {
+    private async processProductInfo(info: ProductInfo, rawMessageContent: string, sender: string): Promise<void> {
         try {
             // product.utils.ts'den buildMessageTemplate fonksiyonunu kullan
             const templateMessage = await buildMessageTemplate(
                 info,
-                async (url) => url // Link dönüştürme fonksiyonu ekleyebilirsin
+                async (url) => this.linkConversionService.generateTrackingLink(url) // Link dönüştürme fonksiyonu
             );
+            
+            // Ürün ismine göre zaten mevcut olup olmadığını kontrol et
             const exists = await this.messageService.isProductExists(info.name);
             if (!exists) {
-                await this.messageService.saveMessage(info, sender);
-                this.logger.log(`[BASARILI] Urun basariyla kaydedildi: ${info.name}`);
+                await this.messageService.saveMessage(rawMessageContent, info, sender); // Ham mesajı, ProductInfo'yu ve göndericiyi kaydet
+                this.logger.log(`[BASARILI] Ürün başarıyla kaydedildi: ${info.name}`);
                 // Telegram'a da göndermek istersen:
                 await this.forwardService.forwardToTelegram(templateMessage);
             } else {
-                this.logger.log(`[BILGI] Urun zaten mevcut: ${info.name}`);
+                this.logger.log(`[BILGI] Ürün zaten mevcut: ${info.name}`);
             }
         } catch (e) {
-            this.logger.error(`[HATA] Urun isleme hatasi: ${(e as Error).message}`);
+            this.logger.error(`[HATA] Ürün işleme hatası: ${(e as Error).message}`);
         }
     }
 
-    private async processLink(link: string, sender: string): Promise<string | null> {
+    private async processLink(link: string, rawMessageContent: string, sender: string): Promise<string | null> {
         const originalWindow = await this.driver.getWindowHandle();
-        this.logger.debug(`[DEBUG] Yeni sekme aciliyor - Link: ${link}`);
+        this.logger.debug(`[DEBUG] Yeni sekme açılıyor - Link: ${link}`);
 
         // Yeni sekme aç
         await this.driver.switchTo().newWindow('tab');
@@ -456,15 +413,15 @@ export class SeleniumService implements OnModuleDestroy {
             const info = await this.scrapeProductInfo(link);
 
             if (await this.isValidProductInfo(info)) {
-                await this.processProductInfo(info, sender);
+                await this.processProductInfo(info, rawMessageContent, sender); // Ham mesajı ve göndericiyi aktar
             } else {
-                this.logger.warn(`[UYARI] Gecersiz urun bilgisi: ${link}`);
+                this.logger.warn(`[UYARI] Geçersiz ürün bilgisi: ${link}`);
             }
         } catch (e: any) {
             if (e.name === 'TimeoutError') {
-                this.logger.error(`[ZAMAN ASIMI] Sayfa yukleme zaman asimi: ${link}`);
+                this.logger.error(`[ZAMAN ASIMI] Sayfa yükleme zaman aşımı: ${link}`);
             } else {
-                this.logger.error(`[HATA] Sayfa isleme hatasi: ${e.message} - Link: ${link}`);
+                this.logger.error(`[HATA] Sayfa işleme hatası: ${e.message} - Link: ${link}`);
             }
         }
 
@@ -476,7 +433,7 @@ export class SeleniumService implements OnModuleDestroy {
     // Stub: Ürün bilgisi geçerli mi?
     private async isValidProductInfo(info: ProductInfo): Promise<boolean> {
         // Burada gerçek validasyon yapılacak
-        return !!info && !!info.name;
+        return Boolean(info.name && info.price);
     }
 
     // Stub: Tarayıcı cleanup

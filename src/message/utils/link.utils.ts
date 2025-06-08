@@ -23,41 +23,31 @@ export const OFFER_ID_MAP: Record<string, number> = {
 };
 
 export const isAlreadyConvertedLink = (url: string): boolean => {
-    return url.includes('tracking') || url.includes('affiliate');
+    return url.includes('sh.gelirortaklari.com') || 
+           url.includes('ty.gl') || 
+           url.includes('hb.gelirortaklari');
 };
 
-export const getOfferIdFromWebsite = (url: string): string | null => {
-    const offerIdMap: { [key: string]: string } = {
-        'hepsiburada.com': '5043',
-        'amazon.com.tr': '5044',
-        'trendyol.com': '5045',
-        'n11.com': '5046',
-        'mediamarkt.com.tr': '5047',
-        'boyner.com.tr': '5048',
-        'karaca.com': '5049',
-        'gratis.com': '5050'
-    };
-
-    for (const [domain, offerId] of Object.entries(offerIdMap)) {
-        if (url.includes(domain)) {
-            return offerId;
+export const getOfferIdFromWebsite = (url: string): number => {
+    for (const [key, value] of Object.entries(OFFER_ID_MAP)) {
+        if (url.toLowerCase().includes(key)) {
+            return value;
         }
     }
-
-    return null;
+    return -1;
 };
 
-export const buildApiRequestUrl = (originalUrl: string, offerId: string, configService: ConfigService): string => {
-    const affiliateId = configService.get<string>('LINK_CONVERSION_AFFILIATE_ID');
-    const adgroupId = configService.get<string>('LINK_CONVERSION_ADGROUP_ID');
-    const locale = configService.get<string>('LINK_CONVERSION_LOCALE');
-
-    return `/link?url=${encodeURIComponent(originalUrl)}&offerId=${offerId}&affiliateId=${affiliateId}&adgroupId=${adgroupId}&locale=${locale}`;
+export const buildApiRequestUrl = (originalUrl: string, offerId: number): string => {
+    return `?aff_id=${AFFILIATE_ID}&adgroup=${ADGROUP_ID}&url=${encodeURIComponent(originalUrl)}&offer_id=${offerId}&locale=${LOCALE}`;
 };
 
 export const createAxiosInstance = (configService: ConfigService): AxiosInstance => {
     return axios.create({
-        baseURL: configService.get<string>('LINK_CONVERSION_API_URL'),
-        timeout: 5000
+        baseURL: BASE_API_URL,
+        timeout: 5000,
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
     });
 }; 

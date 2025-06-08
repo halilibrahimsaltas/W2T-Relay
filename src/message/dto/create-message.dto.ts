@@ -1,4 +1,5 @@
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { ProductInfo } from '../utils/product.utils';
 
 export class CreateMessageDto {
     @IsString()
@@ -8,4 +9,7 @@ export class CreateMessageDto {
     @IsString()
     @IsOptional()
     sender?: string;
+
+    @IsOptional()
+    convertedContent?: ProductInfo;
 }

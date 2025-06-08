@@ -6,8 +6,8 @@ export class Message {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ type: 'simple-json', nullable: true })
-    content: ProductInfo;
+    @Column({ type: 'text', nullable: true })
+    content: string;
 
     @Column()
     sender: string;

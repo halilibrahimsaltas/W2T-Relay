@@ -17,15 +17,10 @@ export class MessageService {
 
     async create(createMessageDto: CreateMessageDto) {
         try {
-            let content: ProductInfo;
-            if (typeof createMessageDto.content === 'string') {
-                content = JSON.parse(createMessageDto.content);
-            } else {
-                content = createMessageDto.content;
-            }
             const message = this.messageRepository.create({
-                content,
-                sender: createMessageDto.sender
+                content: createMessageDto.content,
+                sender: createMessageDto.sender,
+                convertedContent: createMessageDto.convertedContent || null
             });
             return await this.messageRepository.save(message);
         } catch (error) {
@@ -83,7 +78,7 @@ export class MessageService {
         try {
             const message = await this.messageRepository
                 .createQueryBuilder('message')
-                .where("message.content->>'name' = :name", { name: productName })
+                .where('CAST(message.convertedContent AS TEXT) LIKE :name', { name: `%"name":"${productName}"%` })
                 .getOne();
             return !!message;
         } catch (error) {
@@ -92,12 +87,12 @@ export class MessageService {
         }
     }
 
-    async saveMessage(content: ProductInfo, sender: string) {
+    async saveMessage(content: string, convertedContent: ProductInfo, sender: string) {
         try {
             const message = this.messageRepository.create({
-                content,
+                content: content,
                 sender,
-                convertedContent: content
+                convertedContent: convertedContent
             });
             return await this.messageRepository.save(message);
         } catch (error) {
@@ -108,12 +103,10 @@ export class MessageService {
 
     async searchByContent(query: string) {
         try {
-            return await this.messageRepository.find({
-                where: {
-                    content: { name: Like(`%${query}%`) }
-                },
-                order: { id: 'DESC' }
-            });
+            return await this.messageRepository
+                .createQueryBuilder('message')
+                .where('CAST(message.convertedContent AS TEXT) LIKE :query', { query: `%"name":"%${query}%"%` })
+                .getMany();
         } catch (error) {
             this.logger.error('[HATA] İçerik arama hatası:', error);
             throw error;
@@ -122,9 +115,12 @@ export class MessageService {
 
     async findByContent(content: string): Promise<Message | null> {
         try {
-            return await this.messageRepository.findOne({ where: { content: { name: content } } });
+            return await this.messageRepository
+                .createQueryBuilder('message')
+                .where('message.content = :content', { content: content })
+                .getOne();
         } catch (error) {
-            this.logger.error('Mesaj içeriğine göre arama yapılırken hata:', error);
+            this.logger.error('Ham mesaj içeriğine göre arama yapılırken hata:', error);
             throw error;
         }
     }

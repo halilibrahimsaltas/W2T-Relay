@@ -9,18 +9,22 @@ Bu proje, WhatsApp Web üzerinden gelen mesajları Puppeteer kullanarak otomatik
 - Puppeteer ile otomatik tarayıcı kontrolü
 - WhatsApp Web üzerinden mesajların gerçek zamanlı takibi
 - QR kod tarama sonrası otomatik mesaj izleme
+- Otomatik link dönüştürme ve takip sistemi
+- Çoklu mağaza desteği (Trendyol, Hepsiburada, Amazon, N11, vb.)
 
 ### Veritabanı İşlemleri
 
 - PostgreSQL veritabanı entegrasyonu
 - TypeORM ile ORM desteği
 - Mesaj içeriği, gönderen ve zaman bilgilerinin saklanması
+- Ürün bilgilerinin otomatik çekilmesi ve saklanması
 
 ### Telegram Entegrasyonu
 
 - Telegram Bot API kullanarak mesaj iletimi
 - Dinamik bot token ve chat ID yapılandırması
 - Çoklu kanal/grup desteği
+- Özelleştirilebilir mesaj şablonları
 
 ### Web Arayüzü
 
@@ -28,6 +32,7 @@ Bu proje, WhatsApp Web üzerinden gelen mesajları Puppeteer kullanarak otomatik
 - Gerçek zamanlı mesaj listesi
 - Gelişmiş arama özellikleri
 - Sistem ayarları yönetim paneli
+- Responsive tasarım
 
 ## 🛠️ Teknolojiler
 
@@ -64,6 +69,7 @@ Bu proje, WhatsApp Web üzerinden gelen mesajları Puppeteer kullanarak otomatik
 - PostgreSQL 14 veya üzeri
 - Redis 6 veya üzeri
 - Docker (opsiyonel)
+- Chrome/Chromium (Puppeteer için)
 
 ### Backend Kurulumu
 
@@ -105,6 +111,10 @@ Bu proje, WhatsApp Web üzerinden gelen mesajları Puppeteer kullanarak otomatik
    # Server
    PORT=3000
    NODE_ENV=development
+
+   # Link Dönüştürme
+   AFFILIATE_ID=38040
+   ADGROUP_ID=38040
    ```
 
 5. Veritabanı migration'larını çalıştırın:
@@ -156,6 +166,7 @@ Bu proje, WhatsApp Web üzerinden gelen mesajları Puppeteer kullanarak otomatik
 2. WhatsApp Web QR kodunu telefonunuzdan tarayın
 3. Sistem otomatik olarak mesajları izlemeye başlayacak
 4. Ayarlar sayfasından Telegram bot token ve chat ID'leri yapılandırın
+5. Link dönüştürme ayarlarını yapılandırın
 
 ## 🔍 API Endpoints
 
@@ -164,6 +175,7 @@ Bu proje, WhatsApp Web üzerinden gelen mesajları Puppeteer kullanarak otomatik
 - `GET /api/messages`: Tüm mesajları listeler
 - `GET /api/messages/:id`: ID'ye göre mesaj detayı
 - `GET /api/messages/search`: Mesaj içeriğinde arama yapar
+- `POST /api/messages/convert-link`: Link dönüştürme işlemi
 
 ### Ayar İşlemleri
 
@@ -194,6 +206,15 @@ src/
 - Telegram ayarlarının doğru yapılandırılması önemlidir
 - Sistem 10 saniyede bir yeni mesajları kontrol eder
 - Link dönüştürme özelliği için referans parametresi ayarlanmalıdır
+- Desteklenen mağazalar:
+  - Amazon
+  - Trendyol
+  - Hepsiburada
+  - N11
+  - MediaMarkt
+  - Boyner
+  - Karaca
+  - Gratis
 
 ## 🤝 Katkıda Bulunma
 
