@@ -10,7 +10,8 @@ export class SeleniumServiceStarter implements OnModuleInit {
     async onModuleInit() {
         try {
             this.logger.log('[BILGI] SeleniumService başlatılıyor...');
-            await this.seleniumService.onModuleInit();
+            await this.seleniumService.initializeDriver();
+            await this.seleniumService.startMonitoring();
             this.logger.log('[BILGI] SeleniumService başarıyla başlatıldı');
         } catch (error) {
             this.logger.error('[HATA] SeleniumService başlatılırken hata:', error);

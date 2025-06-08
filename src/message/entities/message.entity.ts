@@ -1,22 +1,20 @@
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { ProductInfo } from './product-info.interface';
 
 @Entity()
 export class Message {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column()
-    content: string;
+    @Column({ type: 'simple-json', nullable: true })
+    content: ProductInfo;
 
     @Column()
     sender: string;
 
-    @Column()
-    convertedContent: string;
+    @Column({ type: 'simple-json', nullable: true })
+    convertedContent: ProductInfo;
 
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     createdAt: Date;
-
-    
 }
-

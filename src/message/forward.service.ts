@@ -18,6 +18,8 @@ export class ForwardService {
         this.telegramChatId = this.configService.get<string>('TELEGRAM_CHAT_ID');
     }
 
+    
+
     /**
      * Telegram'a mesaj gönderir (HTML parse mode).
      */

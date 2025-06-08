@@ -17,7 +17,16 @@ export class MessageService {
 
     async create(createMessageDto: CreateMessageDto) {
         try {
-            const message = this.messageRepository.create(createMessageDto);
+            let content: ProductInfo;
+            if (typeof createMessageDto.content === 'string') {
+                content = JSON.parse(createMessageDto.content);
+            } else {
+                content = createMessageDto.content;
+            }
+            const message = this.messageRepository.create({
+                content,
+                sender: createMessageDto.sender
+            });
             return await this.messageRepository.save(message);
         } catch (error) {
             this.logger.error('[HATA] Mesaj oluşturma hatası:', error);
@@ -73,7 +82,7 @@ export class MessageService {
     async isProductExists(productName: string): Promise<boolean> {
         try {
             const message = await this.messageRepository.findOne({
-                where: { content: productName }
+                where: { content: { name: productName } }
             });
             return !!message;
         } catch (error) {
@@ -82,12 +91,12 @@ export class MessageService {
         }
     }
 
-    async saveMessage(content: string, sender: string) {
+    async saveMessage(content: ProductInfo, sender: string) {
         try {
             const message = this.messageRepository.create({
                 content,
                 sender,
-                convertedContent: 'text'
+                convertedContent: content
             });
             return await this.messageRepository.save(message);
         } catch (error) {
@@ -100,7 +109,7 @@ export class MessageService {
         try {
             return await this.messageRepository.find({
                 where: {
-                    content: Like(`%${query}%`)
+                    content: { name: Like(`%${query}%`) }
                 },
                 order: { id: 'DESC' }
             });
@@ -112,7 +121,7 @@ export class MessageService {
 
     async findByContent(content: string): Promise<Message | null> {
         try {
-            return await this.messageRepository.findOne({ where: { content } });
+            return await this.messageRepository.findOne({ where: { content: { name: content } } });
         } catch (error) {
             this.logger.error('Mesaj içeriğine göre arama yapılırken hata:', error);
             throw error;
