@@ -142,15 +142,34 @@ export class ForwardService {
 
     async forwardToTelegram(message: string): Promise<void> {
         try {
-            const url = `https://api.telegram.org/bot${this.telegramBotToken}/sendMessage`;
-            const data = {
-                chat_id: this.telegramChatId,
-                text: message,
-                parse_mode: 'HTML',
-            };
+            const imagePrefix = "IMAGE_URL:";
+            const messageSeparator = "|||MESSAGE:";
 
-            await firstValueFrom(this.httpService.post(url, data));
-            this.logger.log('Mesaj Telegram\'a başarıyla iletildi');
+            if (message.startsWith(imagePrefix) && message.includes(messageSeparator)) {
+                const parts = message.split(messageSeparator);
+                const imageUrl = parts[0].substring(imagePrefix.length);
+                const messageText = parts[1];
+
+                const chatId = this.configService.get<string>('TELEGRAM_CHAT_ID');
+                if (!chatId) {
+                    this.logger.error('[HATA] Telegram chat ID tanımlanmamış!');
+                    return;
+                }
+
+                await this.sendPhotoToTelegram(chatId, imageUrl, messageText);
+                this.logger.log('Görsel ve mesaj Telegram\'a başarıyla iletildi');
+            } else {
+                // Normal metin mesajı gönder
+                const url = `https://api.telegram.org/bot${this.telegramBotToken}/sendMessage`;
+                const data = {
+                    chat_id: this.telegramChatId,
+                    text: message,
+                    parse_mode: 'HTML',
+                };
+
+                await firstValueFrom(this.httpService.post(url, data));
+                this.logger.log('Mesaj Telegram\'a başarıyla iletildi');
+            }
         } catch (error) {
             this.logger.error('Telegram\'a mesaj iletirken hata:', error);
             throw error;

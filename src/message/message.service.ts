@@ -81,9 +81,10 @@ export class MessageService {
 
     async isProductExists(productName: string): Promise<boolean> {
         try {
-            const message = await this.messageRepository.findOne({
-                where: { content: { name: productName } }
-            });
+            const message = await this.messageRepository
+                .createQueryBuilder('message')
+                .where("message.content->>'name' = :name", { name: productName })
+                .getOne();
             return !!message;
         } catch (error) {
             this.logger.error('[HATA] Ürün kontrolü hatası:', error);

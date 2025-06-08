@@ -20,6 +20,8 @@ export class SeleniumService implements OnModuleDestroy {
     private readonly CHECK_INTERVAL = 5000; // 5 saniye
     private readonly MAX_MESSAGES = 3; // Son 3 mesajı kontrol et
     private readonly WAIT_TIMEOUT = 60000; // 60 saniye
+    private readonly CHANNEL_CHECK_TIMEOUT = 10000; // 10 saniye
+    private readonly MAX_RETRIES = 3; // Maksimum deneme sayısı
 
     constructor(
         private readonly configService: ConfigService,
@@ -88,13 +90,13 @@ export class SeleniumService implements OnModuleDestroy {
             await new Promise(resolve => setTimeout(resolve, 10000));
             this.logger.log('Bekleme tamamlandı, kanallar sekmesine geçiliyor...');
 
-            // Mesajları kontrol etmeye başla
+            // Sürekli dönen döngü
             while (this.isRunning) {
                 try {
-                    await this.checkNewMessages();
+                    await this.fetchAllChannels();
                     await new Promise(resolve => setTimeout(resolve, this.CHECK_INTERVAL));
                 } catch (error) {
-                    this.logger.error('Mesaj kontrolü sırasında hata:', error);
+                    this.logger.error('Kanal kontrolü sırasında hata:', error);
                     await new Promise(resolve => setTimeout(resolve, this.CHECK_INTERVAL));
                 }
             }
@@ -254,39 +256,62 @@ export class SeleniumService implements OnModuleDestroy {
 
     // Kanal mesajlarını çekme fonksiyonu (stub)
    private async fetchMessagesFromChannel(channelName: string): Promise<void> {
-    try {
-        // Kısa bekleme: Kanal içeriği yüklensin
-        await this.driver.wait(
-            until.elementLocated(By.css("div[role='application']")),
-            3000
-        );
+    let retryCount = 0;
+    
+    while (retryCount < this.MAX_RETRIES) {
+        try {
+            // Kısa bekleme: Kanal içeriği yüklensin
+            await this.driver.wait(
+                until.elementLocated(By.css("div[role='application']")),
+                this.CHANNEL_CHECK_TIMEOUT
+            );
 
-        // Tüm mesajları bul
-        const messages: WebElement[] = await this.driver.findElements(By.css("div[role='row']"));
+            // Tüm mesajları bul
+            const messages: WebElement[] = await this.driver.findElements(By.css("div[role='row']"));
 
-        // Son 3 mesajı al
-        const startIndex = Math.max(0, messages.length - 3);
-        const lastThreeMessages = messages.slice(startIndex, messages.length);
-
-        for (const message of lastThreeMessages) {
-            try {
-                const msgType = await this.determineMessageType(message);
-                if (msgType === "text") {
-                    const textElement = await message.findElement(By.css("span.selectable-text"));
-                    const msgContent = await textElement.getText();
-                    const sender = await this.getSenderFromMessage(message);
-
-                    await this.processIncomingMessage(
-                        msgContent,
-                        sender ? sender : channelName
-                    );
-                }
-            } catch (e) {
-                this.logger.error("[HATA] Mesaj isleme hatasi: ", e);
+            // Eğer mesaj yoksa veya çok az mesaj varsa, bir sonraki kanala geç
+            if (messages.length === 0) {
+                this.logger.log(`[BILGI] ${channelName} kanalında mesaj bulunamadı, bir sonraki kanala geçiliyor...`);
+                return;
             }
+
+            // Son 3 mesajı al
+            const startIndex = Math.max(0, messages.length - 3);
+            const lastThreeMessages = messages.slice(startIndex, messages.length);
+
+            for (const message of lastThreeMessages) {
+                try {
+                    const msgType = await this.determineMessageType(message);
+                    if (msgType === "text") {
+                        const textElement = await message.findElement(By.css("span.selectable-text"));
+                        const msgContent = await textElement.getText();
+                        const sender = await this.getSenderFromMessage(message);
+
+                        await this.processIncomingMessage(
+                            msgContent,
+                            sender ? sender : channelName
+                        );
+                    }
+                } catch (e) {
+                    this.logger.error("[HATA] Mesaj işleme hatası: ", e);
+                }
+            }
+            
+            // Başarılı işlem sonrası döngüden çık
+            return;
+            
+        } catch (e) {
+            retryCount++;
+            this.logger.error(`[HATA] fetchMessagesFromChannel hatası (Deneme ${retryCount}/${this.MAX_RETRIES}): `, e);
+            
+            if (retryCount === this.MAX_RETRIES) {
+                this.logger.error(`[HATA] ${channelName} kanalı için maksimum deneme sayısına ulaşıldı, bir sonraki kanala geçiliyor...`);
+                return;
+            }
+            
+            // Hata sonrası kısa bekleme
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
-    } catch (e) {
-        this.logger.error("[HATA] fetchMessagesFromChannel hatasi: ", e);
     }
 }
 

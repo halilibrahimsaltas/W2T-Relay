@@ -95,9 +95,22 @@ export const scrapeAmazon = async (driver: WebDriver, info: ProductInfo): Promis
             info.price = await priceElements[0].getText();
         }
 
-        const imageElements = await driver.findElements(By.css("img#landingImage.a-dynamic-image"));
+        const imageElements = await driver.findElements(By.css("img#landingImage, img.a-dynamic-image"));
         if (imageElements.length > 0) {
-            info.imageUrl = await imageElements[0].getAttribute("src");
+            let imageUrl = await imageElements[0].getAttribute("data-old-hires");
+            if (!imageUrl) {
+                imageUrl = await imageElements[0].getAttribute("src");
+            }
+            if (!imageUrl) {
+                const dynamicImage = await imageElements[0].getAttribute("data-a-dynamic-image");
+                if (dynamicImage) {
+                    try {
+                        const images = JSON.parse(dynamicImage);
+                        imageUrl = Object.keys(images)[0];
+                    } catch {}
+                }
+            }
+            info.imageUrl = imageUrl;
         }
     } catch (error) {
         throw new Error(`Amazon ürün bilgisi çekme hatası: ${error.message}`);
