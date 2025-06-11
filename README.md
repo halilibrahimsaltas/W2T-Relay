@@ -1,40 +1,40 @@
-# WhatsApp Web Mesaj İzleme ve İletme Sistemi (NestJS)
+# WhatsApp Web Message Monitoring and Forwarding System (NestJS)
 
-Bu proje, WhatsApp Web üzerinden gelen mesajları Puppeteer kullanarak otomatik olarak izler, PostgreSQL veritabanına kaydeder ve Telegram'a iletir.
+This project automatically monitors messages from WhatsApp Web using Puppeteer, saves them to a PostgreSQL database, and forwards them to Telegram.
 
-## 🚀 Özellikler
+## 🚀 Features
 
-### WhatsApp Web Entegrasyonu
+### WhatsApp Web Integration
 
-- Puppeteer ile otomatik tarayıcı kontrolü
-- WhatsApp Web üzerinden mesajların gerçek zamanlı takibi
-- QR kod tarama sonrası otomatik mesaj izleme
-- Otomatik link dönüştürme ve takip sistemi
-- Çoklu mağaza desteği (Trendyol, Hepsiburada, Amazon, N11, vb.)
+- Automated browser control with Puppeteer
+- Real-time message tracking via WhatsApp Web
+- Automatic message monitoring after QR code scan
+- Automatic link conversion and tracking system
+- Multi-store support (Trendyol, Hepsiburada, Amazon, N11, etc.)
 
-### Veritabanı İşlemleri
+### Database Operations
 
-- PostgreSQL veritabanı entegrasyonu
-- TypeORM ile ORM desteği
-- Mesaj içeriği, gönderen ve zaman bilgilerinin saklanması
-- Ürün bilgilerinin otomatik çekilmesi ve saklanması
+- PostgreSQL database integration
+- TypeORM ORM support
+- Storage of message content, sender, and timestamp
+- Automatic product information retrieval and storage
 
-### Telegram Entegrasyonu
+### Telegram Integration
 
-- Telegram Bot API kullanarak mesaj iletimi
-- Dinamik bot token ve chat ID yapılandırması
-- Çoklu kanal/grup desteği
-- Özelleştirilebilir mesaj şablonları
+- Message forwarding using Telegram Bot API
+- Dynamic bot token and chat ID configuration
+- Multi-channel/group support
+- Customizable message templates
 
-### Web Arayüzü
+### Web Interface
 
-- Next.js tabanlı modern kullanıcı arayüzü
-- Gerçek zamanlı mesaj listesi
-- Gelişmiş arama özellikleri
-- Sistem ayarları yönetim paneli
-- Responsive tasarım
+- Modern user interface based on Next.js
+- Real-time message list
+- Advanced search features
+- System settings management panel
+- Responsive design
 
-## 🛠️ Teknolojiler
+## 🛠️ Technologies
 
 ### Backend
 
@@ -61,69 +61,73 @@ Bu proje, WhatsApp Web üzerinden gelen mesajları Puppeteer kullanarak otomatik
 - Socket.io Client
 - Jest & React Testing Library
 
-## ⚙️ Kurulum
+## ⚙️ Installation
 
-### Gereksinimler
+### Requirements
 
-- Node.js 18 veya üzeri
-- PostgreSQL 14 veya üzeri
-- Redis 6 veya üzeri
-- Docker (opsiyonel)
-- Chrome/Chromium (Puppeteer için)
+- Node.js 18 or higher
+- PostgreSQL 14 or higher
+- Redis 6 or higher
+- Docker (optional)
+- Chrome/Chromium (for Puppeteer)
 
-### Backend Kurulumu
+### Backend Installation
 
-1. Projeyi klonlayın:
+1. Clone the project:
 
    ```bash
-   git clone https://github.com/kullaniciadi/proje-adi.git
-   cd proje-adi
+   git clone https://github.com/username/project-name.git
+   cd project-name
    ```
 
-2. Bağımlılıkları yükleyin:
+2. Install dependencies:
 
    ```bash
    npm install
    ```
 
-3. PostgreSQL veritabanını oluşturun:
+3. Create PostgreSQL database:
 
    ```bash
    createdb whatsapp_messages
    ```
 
-4. `.env` dosyasını oluşturun:
+4. Create `.env` file:
 
    ```env
    # Database
    DATABASE_URL=postgresql://username:password@localhost:5432/whatsapp_messages
+   POSTGRES_HOST=localhost
+   POSTGRES_PORT=5432
+   POSTGRES_USER=postgres
+   POSTGRES_PASSWORD=your_password
+   POSTGRES_DB=w2t_relay
+   POSTGRES_SYNCHRONIZE=true
 
    # Redis
    REDIS_URL=redis://localhost:6379
 
-   # Telegram
+   # Telegram Bot
    TELEGRAM_BOT_TOKEN=your_bot_token
    TELEGRAM_CHAT_ID=your_chat_id
 
-   # JWT
+   # Security
    JWT_SECRET=your_jwt_secret
 
    # Server
    PORT=3000
    NODE_ENV=development
 
-   # Link Dönüştürme
-   AFFILIATE_ID=38040
-   ADGROUP_ID=38040
+
    ```
 
-5. Veritabanı migration'larını çalıştırın:
+5. Run database migrations:
 
    ```bash
    npm run migration:run
    ```
 
-6. Uygulamayı başlatın:
+6. Start the application:
 
    ```bash
    # Development
@@ -134,79 +138,79 @@ Bu proje, WhatsApp Web üzerinden gelen mesajları Puppeteer kullanarak otomatik
    npm run start:prod
    ```
 
-### Frontend Kurulumu
+### Frontend Installation
 
-1. Frontend klasörüne gidin:
+1. Navigate to frontend directory:
 
    ```bash
    cd frontend
    ```
 
-2. Bağımlılıkları yükleyin:
+2. Install dependencies:
 
    ```bash
    npm install
    ```
 
-3. `.env.local` dosyasını oluşturun:
+3. Create `.env.local` file:
 
    ```env
    NEXT_PUBLIC_API_URL=http://localhost:3000
    NEXT_PUBLIC_WS_URL=ws://localhost:3000
    ```
 
-4. Geliştirme sunucusunu başlatın:
+4. Start development server:
    ```bash
    npm run dev
    ```
 
-## 📝 Kullanım
+## 📝 Usage
 
-1. `http://localhost:3000` adresinden web arayüzüne erişin
-2. WhatsApp Web QR kodunu telefonunuzdan tarayın
-3. Sistem otomatik olarak mesajları izlemeye başlayacak
-4. Ayarlar sayfasından Telegram bot token ve chat ID'leri yapılandırın
-5. Link dönüştürme ayarlarını yapılandırın
+1. Access web interface at `http://localhost:3000`
+2. Scan WhatsApp Web QR code with your phone
+3. System will automatically start monitoring messages
+4. Configure Telegram bot token and chat IDs from settings page
+5. Configure link conversion settings
 
 ## 🔍 API Endpoints
 
-### Mesaj İşlemleri
+### Message Operations
 
-- `GET /api/messages`: Tüm mesajları listeler
-- `GET /api/messages/:id`: ID'ye göre mesaj detayı
-- `GET /api/messages/search`: Mesaj içeriğinde arama yapar
-- `POST /api/messages/convert-link`: Link dönüştürme işlemi
+- `GET /api/messages`: List all messages
+- `GET /api/messages/:id`: Get message details by ID
+- `GET /api/messages/search`: Search in message content
+- `POST /api/messages/convert-link`: Convert link
 
-### Ayar İşlemleri
+### Settings Operations
 
-- `GET /api/settings`: Tüm ayarları listeler
-- `GET /api/settings/:key`: Belirli bir ayarı getirir
-- `POST /api/settings/:key`: Ayar değerini günceller
+- `GET /api/settings`: List all settings
+- `GET /api/settings/:key`: Get specific setting
+- `POST /api/settings/:key`: Update setting value
 
-## 📦 Proje Yapısı
+## 📦 Project Structure
 
 ```
 src/
 ├── main/
-│   ├── config/           # Yapılandırma dosyaları
-│   ├── controllers/      # API endpoint'leri
-│   ├── services/         # İş mantığı
-│   ├── entities/         # Veritabanı modelleri
-│   ├── migrations/       # Veritabanı migration'ları
+│   ├── config/           # Configuration files
+│   ├── controllers/      # API endpoints
+│   ├── services/         # Business logic
+│   ├── entities/         # Database models
+│   ├── migrations/       # Database migrations
 │   ├── dto/             # Data Transfer Objects
 │   ├── interfaces/      # TypeScript interfaces
-│   └── utils/           # Yardımcı fonksiyonlar
-├── test/                # Test dosyaları
-└── main.ts             # Ana uygulama dosyası
+│   └── utils/           # Helper functions
+├── test/                # Test files
+└── main.ts             # Main application file
 ```
 
-## ⚠️ Önemli Notlar
+## ⚠️ Important Notes
 
-- WhatsApp Web'in açık kalması gerekir
-- Telegram ayarlarının doğru yapılandırılması önemlidir
-- Sistem 10 saniyede bir yeni mesajları kontrol eder
-- Link dönüştürme özelliği için referans parametresi ayarlanmalıdır
-- Desteklenen mağazalar:
+- WhatsApp Web must remain open
+- Telegram settings must be configured correctly
+- System checks for new messages every 10 seconds
+- Link conversion feature requires reference parameter setup
+- Supported stores:
   - Amazon
   - Trendyol
   - Hepsiburada
@@ -216,14 +220,14 @@ src/
   - Karaca
   - Gratis
 
-## 🤝 Katkıda Bulunma
+## 🤝 Contributing
 
-1. Bu depoyu fork edin
-2. Yeni bir branch oluşturun (`git checkout -b feature/yeniOzellik`)
-3. Değişikliklerinizi commit edin (`git commit -am 'Yeni özellik eklendi'`)
-4. Branch'inizi push edin (`git push origin feature/yeniOzellik`)
-5. Pull Request oluşturun
+1. Fork this repository
+2. Create your feature branch (`git checkout -b feature/newFeature`)
+3. Commit your changes (`git commit -am 'Add new feature'`)
+4. Push to the branch (`git push origin feature/newFeature`)
+5. Create a Pull Request
 
-## 📄 Lisans
+## 📄 License
 
-Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakınız.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

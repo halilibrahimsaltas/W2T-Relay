@@ -1,25 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
 import { ConfigService } from '@nestjs/config';
 
-export const BASE_API_URL = 'https://sh.gelirortaklari.com/shortlink';
-export const AFFILIATE_ID = '38040';
-export const ADGROUP_ID = '38040';
-export const LOCALE = 'tr';
-
-export const OFFER_ID_MAP: Record<string, number> = {
-    'amazon': 6718,
-    'boyner': 6568,
-    'getir': 6906,
-    'decathlon': 6786,
-    'karaca': 6716,
-    'mediamarkt': 6816,
-    'n11': 6717,
-    'trendyol': 6719,
-    'ciceksepeti': 6721,
-    'gittigidiyor': 6722,
-    'supplementler': 5528,
-    'amzn': 6718,
-    'gratis': 6779
+export const getOfferIdMap = (configService: ConfigService): Record<string, number> => {
+    return JSON.parse(configService.get<string>('OFFER_ID_MAP'));
 };
 
 export const isAlreadyConvertedLink = (url: string): boolean => {
@@ -28,8 +11,9 @@ export const isAlreadyConvertedLink = (url: string): boolean => {
            url.includes('hb.gelirortaklari');
 };
 
-export const getOfferIdFromWebsite = (url: string): number => {
-    for (const [key, value] of Object.entries(OFFER_ID_MAP)) {
+export const getOfferIdFromWebsite = (url: string, configService: ConfigService): number => {
+    const offerIdMap = getOfferIdMap(configService);
+    for (const [key, value] of Object.entries(offerIdMap)) {
         if (url.toLowerCase().includes(key)) {
             return value;
         }
@@ -37,13 +21,18 @@ export const getOfferIdFromWebsite = (url: string): number => {
     return -1;
 };
 
-export const buildApiRequestUrl = (originalUrl: string, offerId: number): string => {
-    return `?aff_id=${AFFILIATE_ID}&adgroup=${ADGROUP_ID}&url=${encodeURIComponent(originalUrl)}&offer_id=${offerId}&locale=${LOCALE}`;
+export const buildApiRequestUrl = (originalUrl: string, offerId: number, configService: ConfigService): string => {
+    const affiliateId = configService.get<string>('LINK_CONVERSION_AFFILIATE_ID');
+    const adgroupId = configService.get<string>('LINK_CONVERSION_ADGROUP_ID');
+    const locale = configService.get<string>('LINK_CONVERSION_LOCALE');
+    
+    return `?aff_id=${affiliateId}&adgroup=${adgroupId}&url=${encodeURIComponent(originalUrl)}&offer_id=${offerId}&locale=${locale}`;
 };
 
 export const createAxiosInstance = (configService: ConfigService): AxiosInstance => {
+    const baseUrl = configService.get<string>('LINK_CONVERSION_API_URL');
     return axios.create({
-        baseURL: BASE_API_URL,
+        baseURL: baseUrl,
         timeout: 5000,
         headers: {
             'Accept': 'application/json',
