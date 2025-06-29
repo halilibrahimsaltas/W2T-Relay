@@ -20,37 +20,37 @@ export class LinkConversionService {
                 this.logger.warn('[HATA] Boş veya geçersiz URL');
                 return 'Geçersiz URL!';
             }
-
+    
             if (isAlreadyConvertedLink(originalUrl)) {
                 this.logger.log('[BILGI] URL zaten dönüştürülmüş: ' + originalUrl);
                 return originalUrl;
             }
-
+    
             if (originalUrl.toLowerCase().includes('hepsiburada')) {
                 this.logger.log('[BILGI] Hepsiburada linki tespit edildi, özel API kullanılacak');
                 return await this.handleHepsiburadaLink(originalUrl);
             }
-
-            const offerId = getOfferIdFromWebsite(originalUrl);
+    
+            const offerId = getOfferIdFromWebsite(originalUrl, this.configService);
             if (offerId === -1) {
                 this.logger.warn('[UYARI] URL için uygun offer_id bulunamadı: ' + originalUrl);
                 return originalUrl;
             }
-
-            const apiRequestUrl = buildApiRequestUrl(originalUrl, offerId);
-            this.logger.debug('[DEBUG] API isteği hazırlanıyor - URL: ' + originalUrl);
-
+    
+            const apiRequestUrl = buildApiRequestUrl(originalUrl, offerId, this.configService);
+            this.logger.debug('[DEBUG] API isteği hazırlanıyor - URL: ' + apiRequestUrl);
+    
             const response = await this.apiClient.get(apiRequestUrl);
-            
-            if (!response.data?.data?.trackingUrl) {
-                this.logger.error('[HATA] API yanıtında trackingUrl bulunamadı! Yanıt: ' + JSON.stringify(response.data));
+    
+            if (!response.data?.shortlink) {
+                this.logger.error('[HATA] API yanıtında shortlink bulunamadı! Yanıt: ' + JSON.stringify(response.data));
                 return originalUrl;
             }
-
-            const trackingUrl = response.data.data.trackingUrl;
-            this.logger.log('[BASARILI] Link dönüşümü başarılı: ' + trackingUrl);
-            return trackingUrl;
-
+    
+            const shortlink = decodeURIComponent(response.data.shortlink);
+            this.logger.log('[BASARILI] Link dönüşümü başarılı: ' + shortlink);
+            return shortlink;
+    
         } catch (error) {
             this.logger.error(`[HATA] Link dönüştürme hatası: ${error.message}`);
             if (error.response) {
@@ -59,6 +59,7 @@ export class LinkConversionService {
             return originalUrl;
         }
     }
+    
 
     private async handleHepsiburadaLink(originalUrl: string): Promise<string> {
         try {
