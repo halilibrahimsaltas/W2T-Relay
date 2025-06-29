@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createAxiosInstance, buildApiRequestUrl, getOfferIdFromWebsite, isAlreadyConvertedLink } from './utils/link.utils';
+import { createAxiosInstance, buildApiRequestUrl, getOfferIdFromWebsite, isAlreadyConvertedLink, cleanAffiliateParams } from './utils/link.utils';
 import { createHepsiburadaAxiosInstance, generateHepsiburadaRequestBody } from './utils/hepsiburada.utils';
 
 @Injectable()
@@ -31,13 +31,14 @@ export class LinkConversionService {
                 return await this.handleHepsiburadaLink(originalUrl);
             }
     
-            const offerId = getOfferIdFromWebsite(originalUrl, this.configService);
+            const cleanedUrl = cleanAffiliateParams(originalUrl);
+            const offerId = getOfferIdFromWebsite(cleanedUrl, this.configService);
             if (offerId === -1) {
                 this.logger.warn('[UYARI] URL için uygun offer_id bulunamadı: ' + originalUrl);
                 return originalUrl;
             }
     
-            const apiRequestUrl = buildApiRequestUrl(originalUrl, offerId, this.configService);
+            const apiRequestUrl = buildApiRequestUrl(cleanedUrl, offerId, this.configService);
             this.logger.debug('[DEBUG] API isteği hazırlanıyor - URL: ' + apiRequestUrl);
     
             const response = await this.apiClient.get(apiRequestUrl);

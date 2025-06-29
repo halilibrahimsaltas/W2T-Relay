@@ -33,6 +33,12 @@ export const getOfferIdFromWebsite = (url: string, configService: ConfigService)
     return -1;
 };
 
+export const cleanAffiliateParams = (url: string): string => {
+    const cleanUrl = url.replace(/([?&])(tag|aff_id|utm_[^=]+)=[^&]+/gi, '$1');
+    // Gereksiz ? veya & kaldıysa temizle
+    return cleanUrl.replace(/[?&]$/, '');
+};
+
 /**
  * API endpoint URL'sini oluşturur
  */
