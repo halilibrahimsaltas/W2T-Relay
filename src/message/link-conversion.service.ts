@@ -1,16 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createAxiosInstance, buildApiRequestUrl, getOfferIdFromWebsite, isAlreadyConvertedLink, cleanAffiliateParams } from './utils/link.utils';
+import axios from 'axios';
+import { buildApiRequestUrl, getOfferIdFromWebsite, isAlreadyConvertedLink } from './utils/link.utils';
 import { createHepsiburadaAxiosInstance, generateHepsiburadaRequestBody } from './utils/hepsiburada.utils';
 
 @Injectable()
 export class LinkConversionService {
     private readonly logger = new Logger(LinkConversionService.name);
-    private readonly apiClient;
     private readonly hepsiburadaClient;
 
     constructor(private readonly configService: ConfigService) {
-        this.apiClient = createAxiosInstance(this.configService);
         this.hepsiburadaClient = createHepsiburadaAxiosInstance(this.configService);
     }
 
@@ -31,26 +30,28 @@ export class LinkConversionService {
                 return await this.handleHepsiburadaLink(originalUrl);
             }
     
-            const cleanedUrl = cleanAffiliateParams(originalUrl);
-            const offerId = getOfferIdFromWebsite(cleanedUrl, this.configService);
+            const offerId = getOfferIdFromWebsite(originalUrl, this.configService);
             if (offerId === -1) {
                 this.logger.warn('[UYARI] URL için uygun offer_id bulunamadı: ' + originalUrl);
                 return originalUrl;
             }
     
-            const apiRequestUrl = buildApiRequestUrl(cleanedUrl, offerId, this.configService);
-            this.logger.debug('[DEBUG] API isteği hazırlanıyor - URL: ' + apiRequestUrl);
+            const fullRequestUrl = buildApiRequestUrl(originalUrl, offerId, this.configService);
+            this.logger.debug('[DEBUG] API isteği gönderilecek tam URL: ' + fullRequestUrl);
     
-            const response = await this.apiClient.get(apiRequestUrl);
+            const response = await axios.get(fullRequestUrl);
+            this.logger.debug('[DEBUG] API ham yanıtı: ' + JSON.stringify(response.data));
     
-            if (!response.data?.shortlink) {
-                this.logger.error('[HATA] API yanıtında shortlink bulunamadı! Yanıt: ' + JSON.stringify(response.data));
+            const apiResponse = response.data?.response;
+    
+            if (apiResponse?.status !== 1 || !apiResponse?.data?.click_url) {
+                this.logger.error('[HATA] API yanıtı geçersiz veya click_url bulunamadı! Yanıt: ' + JSON.stringify(response.data));
                 return originalUrl;
             }
     
-            const shortlink = decodeURIComponent(response.data.shortlink);
-            this.logger.log('[BASARILI] Link dönüşümü başarılı: ' + shortlink);
-            return shortlink;
+            const trackingUrl = decodeURIComponent(apiResponse.data.click_url);
+            this.logger.log('[BASARILI] Link dönüşümü başarılı: ' + trackingUrl);
+            return trackingUrl;
     
         } catch (error) {
             this.logger.error(`[HATA] Link dönüştürme hatası: ${error.message}`);
@@ -60,7 +61,6 @@ export class LinkConversionService {
             return originalUrl;
         }
     }
-    
 
     private async handleHepsiburadaLink(originalUrl: string): Promise<string> {
         try {
@@ -89,4 +89,4 @@ export class LinkConversionService {
             return originalUrl;
         }
     }
-} 
+}

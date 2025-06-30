@@ -75,31 +75,22 @@ export class SeleniumService implements OnModuleDestroy {
     public async startMonitoring() {
         if (this.isRunning || !this.isInitialized) return;
         this.isRunning = true;
-
+    
         try {
-            // QR kodunun okunmasını bekle
             await this.driver.wait(
                 until.elementLocated(By.css("button[aria-label='Kanallar']")),
                 this.WAIT_TIMEOUT
             );
-
+    
             this.logger.log('WhatsApp Web başarıyla bağlandı');
-
-            // QR kodu okunduktan sonra 10 saniye bekle
-            this.logger.log('Pop-up kapatmanız için 10 saniye bekleniyor...');
             await new Promise(resolve => setTimeout(resolve, 10000));
-            this.logger.log('Bekleme tamamlandı, kanallar sekmesine geçiliyor...');
-
-            // Sürekli dönen döngü
-            while (this.isRunning) {
-                try {
-                    await this.fetchAllChannels();
-                    await new Promise(resolve => setTimeout(resolve, this.CHECK_INTERVAL));
-                } catch (error) {
-                    this.logger.error('Kanal kontrolü sırasında hata:', error);
-                    await new Promise(resolve => setTimeout(resolve, this.CHECK_INTERVAL));
-                }
-            }
+    
+            // Başlangıçta tüm kanallar bir kez işlenir
+            await this.initialScanAllChannelsOnce();
+    
+            // Sürekli olarak sadece okunmamış mesajları kontrol eder
+            await this.monitorUnreadChannelsLoop();
+    
         } catch (error) {
             this.logger.error('WhatsApp Web bağlantısı sırasında hata:', error);
             this.isRunning = false;
@@ -151,54 +142,68 @@ export class SeleniumService implements OnModuleDestroy {
         }
     }
 
-    public async fetchAllChannels() {
+    private async initialScanAllChannelsOnce(): Promise<void> {
+        this.logger.log('[BILGI] Başlangıç kanal taraması başlatıldı...');
         try {
             await this.openChannelsTab();
-
-            await this.driver.wait(
-                until.elementsLocated(By.css("div[aria-label='Kanal Listesi'] div[role='listitem']")),
-                10000
-            );
-            const channelElements: WebElement[] = await this.driver.findElements(By.css("div[aria-label='Kanal Listesi'] div[role='listitem']"));
-
-            this.logger.log(`[BILGI] Toplam ${channelElements.length} kanal bulundu.`);
-
-            for (let i = 0; i < channelElements.length; i++) {
-                const channel = channelElements[i];
+    
+            const channelElements = await this.driver.findElements(By.css("div[aria-label='Kanal Listesi'] div[role='listitem']"));
+            this.logger.log(`[BILGI] ${channelElements.length} kanal bulundu (ilk tarama).`);
+    
+            for (const channel of channelElements) {
                 try {
                     const channelName = await this.getChannelName(channel);
-                    const clickableChannel = await this.driver.wait(
-                        until.elementIsVisible(channel),
-                        10000
-                    );
-
-                    // Scroll into view
-                    await this.driver.executeScript(
-                        "arguments[0].scrollIntoView({block: 'center', behavior: 'instant'});",
-                        clickableChannel
-                    );
-
-                    try {
-                        await clickableChannel.click();
-                    } catch (e) {
-                        await this.driver.executeScript("arguments[0].click();", clickableChannel);
-                    }
-
-                    // Kısa bekleme
-                    await this.driver.wait(
-                        until.elementLocated(By.css("div[role='application']")),
-                        3000
-                    );
-
-                    this.logger.log(`[BILGI] Islenen kanal: ${channelName}`);
+                    await this.scrollAndClick(channel);
+                    this.logger.log(`[BILGI] İlk taramada kanal işleniyor: ${channelName}`);
                     await this.fetchMessagesFromChannel(channelName);
                 } catch (e) {
-                    this.logger.error('[HATA] Kanal isleme hatasi: ', e);
+                    this.logger.error('[HATA] İlk taramada kanal işlenemedi:', e);
                 }
             }
+    
+            this.logger.log('[BILGI] Başlangıç kanal taraması tamamlandı.');
         } catch (e) {
-            this.logger.error('[HATA] Kanal listesi isleme hatasi: ', e);
+            this.logger.error('[HATA] İlk kanal taraması sırasında hata:', e);
         }
+    }
+
+    private async monitorUnreadChannelsLoop(): Promise<void> {
+        this.logger.log('[BILGI] Okunmamış mesaj kontrol döngüsü başlatıldı...');
+        while (this.isRunning) {
+            try {
+                await this.openChannelsTab();
+    
+                const channelElements = await this.driver.findElements(By.css("div[aria-label='Kanal Listesi'] div[role='listitem']"));
+    
+                for (const channel of channelElements) {
+                    try {
+                        const unreadBadge = await channel.findElements(By.css("span[aria-label*='okunmamış mesaj']"));
+                        if (unreadBadge.length === 0) continue;
+    
+                        const channelName = await this.getChannelName(channel);
+                        await this.scrollAndClick(channel);
+                        this.logger.log(`[BILGI] Okunmamış mesaj bulunan kanal: ${channelName}`);
+                        await this.fetchMessagesFromChannel(channelName);
+                    } catch (e) {
+                        this.logger.error('[HATA] Okunmamış kanal işleme hatası:', e);
+                    }
+                }
+    
+                await new Promise(res => setTimeout(res, this.CHECK_INTERVAL));
+            } catch (e) {
+                this.logger.error('[HATA] Okunmamış kanallar döngüsü hatası:', e);
+                await new Promise(res => setTimeout(res, this.CHECK_INTERVAL));
+            }
+        }
+    }
+    private async scrollAndClick(channel: WebElement): Promise<void> {
+        await this.driver.executeScript("arguments[0].scrollIntoView({block: 'center'});", channel);
+        try {
+            await channel.click();
+        } catch {
+            await this.driver.executeScript("arguments[0].click();", channel);
+        }
+        await this.driver.wait(until.elementLocated(By.css("div[role='application']")), 3000);
     }
 
     // Kanal ismi alma fonksiyonu (stub)

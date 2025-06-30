@@ -42,32 +42,24 @@ export const cleanAffiliateParams = (url: string): string => {
 /**
  * API endpoint URL'sini oluşturur
  */
+/**
+ * API endpoint URL'sini oluşturur (tam URL)
+ */
 export const buildApiRequestUrl = (
     originalUrl: string,
     offerId: number,
     configService: ConfigService
 ): string => {
-    const affiliateId = configService.get<string>('LINK_CONVERSION_AFFILIATE_ID');
-    const adgroupId = configService.get<string>('LINK_CONVERSION_ADGROUP_ID');
-    const locale = configService.get<string>('LINK_CONVERSION_LOCALE');
+    const baseUrl = configService.get<string>('LINK_CONVERSION_API_URL'); // örn: https://gelirortaklari.api.hasoffers.com/Api/v3/json
+    const apiKey = configService.get<string>('LINK_CONVERSION_API_KEY');
 
-    const encodedUrl = encodeURIComponent(originalUrl);
-
-    return `?aff_id=${affiliateId}&adgroup=${adgroupId}&url=${encodedUrl}&offer_id=${offerId}&locale=${locale}`;
-};
-
-/**
- * Axios örneğini oluşturur
- */
-export const createAxiosInstance = (configService: ConfigService): AxiosInstance => {
-    const baseURL = configService.get<string>('LINK_CONVERSION_API_URL');
-    
-    return axios.create({
-        baseURL,
-        timeout: 5000,
-        headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json'
-        }
+    const params = new URLSearchParams({
+        api_key: apiKey,
+        Target: 'Affiliate_Offer',
+        Method: 'generateTrackingLink',
+        offer_id: offerId.toString(),
+        [`params[url]`]: originalUrl // burada encode ETME, API zaten parse ediyor
     });
+
+    return `${baseUrl}?${params.toString()}`;
 };

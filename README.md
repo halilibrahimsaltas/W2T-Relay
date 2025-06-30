@@ -1,12 +1,12 @@
 # WhatsApp Web Message Monitoring and Forwarding System (NestJS)
 
-This project automatically monitors messages from WhatsApp Web using Puppeteer, saves them to a PostgreSQL database, and forwards them to Telegram.
+This project automatically monitors messages from WhatsApp Web using Selenium, saves them to a PostgreSQL database, and forwards them to Telegram.
 
 ## 🚀 Features
 
 ### WhatsApp Web Integration
 
-- Automated browser control with Puppeteer
+- Automated browser control with Selenium
 - Real-time message tracking via WhatsApp Web
 - Automatic message monitoring after QR code scan
 - Automatic link conversion and tracking system
@@ -41,7 +41,7 @@ This project automatically monitors messages from WhatsApp Web using Puppeteer, 
 - Node.js 18+
 - NestJS
 - TypeScript
-- Puppeteer
+- Selenium Webdriver
 - PostgreSQL
 - TypeORM
 - Telegram Bot API
@@ -69,7 +69,7 @@ This project automatically monitors messages from WhatsApp Web using Puppeteer, 
 - PostgreSQL 14 or higher
 - Redis 6 or higher
 - Docker (optional)
-- Chrome/Chromium (for Puppeteer)
+- Chrome/Chromium (for Selenium)
 
 ### Backend Installation
 
