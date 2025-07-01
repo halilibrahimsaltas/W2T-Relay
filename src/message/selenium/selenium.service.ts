@@ -22,6 +22,7 @@ export class SeleniumService implements OnModuleDestroy {
     private readonly WAIT_TIMEOUT = 60000; // 60 saniye
     private readonly CHANNEL_CHECK_TIMEOUT = 10000; // 10 saniye
     private readonly MAX_RETRIES = 3; // Maksimum deneme sayısı
+    private readonly IDLE_CHANNEL_NAME = "BOT-BEKLEME";
 
     constructor(
         private readonly configService: ConfigService,
@@ -30,6 +31,7 @@ export class SeleniumService implements OnModuleDestroy {
         private readonly forwardService: ForwardService,
     ) {}
 
+    
     public async initializeDriver() {
         try {
             // Chrome ayarlarını yapılandır
@@ -169,30 +171,48 @@ export class SeleniumService implements OnModuleDestroy {
 
     private async monitorUnreadChannelsLoop(): Promise<void> {
         this.logger.log('[BILGI] Okunmamış mesaj kontrol döngüsü başlatıldı...');
+        await this.openChannelsTab();
         while (this.isRunning) {
             try {
-                await this.openChannelsTab();
-    
                 const channelElements = await this.driver.findElements(By.css("div[aria-label='Kanal Listesi'] div[role='listitem']"));
+                let unreadProcessed = false;
     
                 for (const channel of channelElements) {
                     try {
                         const unreadBadge = await channel.findElements(By.css("span[aria-label*='okunmamış mesaj']"));
                         if (unreadBadge.length === 0) continue;
-    
                         const channelName = await this.getChannelName(channel);
                         await this.scrollAndClick(channel);
                         this.logger.log(`[BILGI] Okunmamış mesaj bulunan kanal: ${channelName}`);
                         await this.fetchMessagesFromChannel(channelName);
+                        unreadProcessed = true;
                     } catch (e) {
                         this.logger.error('[HATA] Okunmamış kanal işleme hatası:', e);
                     }
+                }
+    
+                // Tüm tarama bitince kullanılmayan kanala geç
+                if (unreadProcessed) {
+                    await this.switchToIdleChannel(this.IDLE_CHANNEL_NAME);
                 }
     
                 await new Promise(res => setTimeout(res, this.CHECK_INTERVAL));
             } catch (e) {
                 this.logger.error('[HATA] Okunmamış kanallar döngüsü hatası:', e);
                 await new Promise(res => setTimeout(res, this.CHECK_INTERVAL));
+            }
+        }
+    }
+    
+    // Kullanılmayan kanala geçiş fonksiyonu
+    private async switchToIdleChannel(channelName: string): Promise<void> {
+        const channelElements = await this.driver.findElements(By.css("div[aria-label='Kanal Listesi'] div[role='listitem']"));
+        for (const channel of channelElements) {
+            const name = await this.getChannelName(channel);
+            if (name === channelName) {
+                await this.scrollAndClick(channel);
+                this.logger.log(`[BILGI] Bekleme kanalına geçildi: ${channelName}`);
+                break;
             }
         }
     }
