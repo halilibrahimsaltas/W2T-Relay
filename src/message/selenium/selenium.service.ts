@@ -176,7 +176,7 @@ export class SeleniumService implements OnModuleDestroy {
             try {
                 const channelElements = await this.driver.findElements(By.css("div[aria-label='Kanal Listesi'] div[role='listitem']"));
                 let unreadProcessed = false;
-    
+
                 for (const channel of channelElements) {
                     try {
                         const unreadBadge = await channel.findElements(By.css("span[aria-label*='okunmamış mesaj']"));
@@ -190,12 +190,28 @@ export class SeleniumService implements OnModuleDestroy {
                         this.logger.error('[HATA] Okunmamış kanal işleme hatası:', e);
                     }
                 }
-    
-                // Tüm tarama bitince kullanılmayan kanala geç
+
                 if (unreadProcessed) {
-                    await this.switchToIdleChannel(this.IDLE_CHANNEL_NAME);
+                    // 10 saniye boyunca yeni okunmamış mesaj var mı kontrol et
+                    const waitUntil = Date.now() + 10000; // 10 saniye
+                    let newUnreadFound = false;
+                    while (Date.now() < waitUntil) {
+                        await new Promise(res => setTimeout(res, 1000)); // 1 sn bekle
+                        const channels = await this.driver.findElements(By.css("div[aria-label='Kanal Listesi'] div[role='listitem']"));
+                        for (const channel of channels) {
+                            const unreadBadge = await channel.findElements(By.css("span[aria-label*='okunmamış mesaj']"));
+                            if (unreadBadge.length > 0) {
+                                newUnreadFound = true;
+                                break;
+                            }
+                        }
+                        if (newUnreadFound) break;
+                    }
+                    if (!newUnreadFound) {
+                        await this.switchToIdleChannel(this.IDLE_CHANNEL_NAME);
+                    }
                 }
-    
+
                 await new Promise(res => setTimeout(res, this.CHECK_INTERVAL));
             } catch (e) {
                 this.logger.error('[HATA] Okunmamış kanallar döngüsü hatası:', e);
@@ -259,8 +275,8 @@ export class SeleniumService implements OnModuleDestroy {
                 return;
             }
 
-        // Son 3 mesajı al
-        const startIndex = Math.max(0, messages.length - 3);
+        // Son 2 mesajı al  
+        const startIndex = Math.max(0, messages.length - 2);
         const lastThreeMessages = messages.slice(startIndex, messages.length);
 
         for (const message of lastThreeMessages) {
