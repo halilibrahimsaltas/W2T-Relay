@@ -20,7 +20,7 @@ import { MessageModule } from './message/message.module';
                 database: configService.get('POSTGRES_DB'),
                 entities: [__dirname + '/**/*.entity{.ts,.js}'],
                 synchronize: configService.get('POSTGRES_SYNCHRONIZE'),
-                logging: true,
+                logging: false,
             }),
             inject: [ConfigService],
         }),

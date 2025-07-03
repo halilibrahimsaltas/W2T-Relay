@@ -14,7 +14,7 @@ import { SeleniumServiceStarter } from './selenium/selenium-starter.service';
     imports: [
         TypeOrmModule.forFeature([Message]),
         HttpModule,
-        ConfigModule
+        ConfigModule,
     ],
     controllers: [MessageController],
     providers: [

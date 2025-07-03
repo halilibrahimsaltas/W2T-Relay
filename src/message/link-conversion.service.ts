@@ -54,7 +54,7 @@ export class LinkConversionService {
             return trackingUrl;
     
         } catch (error) {
-            this.logger.error(`[HATA] Link dönüştürme hatası: ${error.message}`);
+            this.logger.error(`[HATA] Link dönüştürme hatası: Link zaten dönüştürülmüş veya geçersiz URL!`);
             if (error.response) {
                 this.logger.error(`[HATA] API Yanıt Detayı: ${JSON.stringify(error.response.data)}`);
             }

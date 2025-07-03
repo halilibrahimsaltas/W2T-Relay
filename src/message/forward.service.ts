@@ -80,7 +80,7 @@ export class ForwardService {
                 this.httpService.post(url, body)
             );
 
-            this.logger.log(`[BILGI] Fotoğraf gönderildi - Chat ID: ${formattedChatId}. Yanıt: ${JSON.stringify(response.data)}`);
+            this.logger.log(`[BILGI] Fotoğraf gönderildi.`);
 
         } catch (error) {
             this.logger.error('[HATA] Fotoğraf gönderme hatası:', error);
