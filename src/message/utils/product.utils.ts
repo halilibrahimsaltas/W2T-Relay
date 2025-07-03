@@ -72,10 +72,29 @@ export const scrapeHepsiburada = async (driver: WebDriver, info: ProductInfo): P
             info.price = await priceElement[0].getText();
         }
 
-        const imageElements = await driver.findElements(By.css("img[class*='hb-HbImage-view_image']"));
-        if (imageElements.length > 0) {
-            info.imageUrl = await imageElements[0].getAttribute("src");
+        let imageUrl = "";
+
+let imageElements = await driver.findElements(By.css("img[class*='hb-HbImage-view_image']"));
+if (imageElements.length > 0) {
+    imageUrl = await imageElements[0].getAttribute("src");
+} else {
+    // 2. seçenek: source[type='image/webp']
+    const sourceElements = await driver.findElements(By.css("source[type='image/webp']"));
+    if (sourceElements.length > 0) {
+        const srcset = await sourceElements[0].getAttribute("srcset");
+        if (srcset) {
+            imageUrl = srcset.split(" ")[0]; // srcset'ten ilk URL
         }
+    } else {
+        // 3. seçenek: picture img[src*='productimages']
+        const pictureImgElements = await driver.findElements(By.css("picture img[src*='productimages']"));
+        if (pictureImgElements.length > 0) {
+            imageUrl = await pictureImgElements[0].getAttribute("src");
+        }
+    }
+}
+
+info.imageUrl = imageUrl;
     } catch (error) {
         throw new Error(`Hepsiburada ürün bilgisi çekme hatası: ${error.message}`);
     }
