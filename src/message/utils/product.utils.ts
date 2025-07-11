@@ -67,11 +67,22 @@ export const scrapeHepsiburada = async (driver: WebDriver, info: ProductInfo): P
         const nameElement = await driver.findElement(By.css("[data-test-id='title'], [data-test-id='title'],[data-test-id='header-h1']"));
         info.name = await nameElement.getText();
 
-        const priceElement = await driver.findElements(By.css("[data-test-id='price-current-price'], [data-test-id='product-price'],[data-test-id='checkout-price'],[data-test-id='price'] span"));
-        if (priceElement.length > 0) {
-            info.price = await priceElement[0].getText();
+        // Önce premium fiyatı kontrol et
+        const premiumPriceElement = await driver.findElements(By.css("[data-test-id='non-premium-price'] .e5a8xXWNoVB_Ze6tzu_U b"));
+        if (premiumPriceElement && premiumPriceElement.length > 0) {
+            const premiumText = await premiumPriceElement[0].getText();
+            console.log("Premium fiyat:", premiumText);
+            info.price = premiumText;
+        } else {
+            const priceElement = await driver.findElements(By.css(
+                "[data-test-id='price-current-price'] b, [data-test-id='product-price'] b, [data-test-id='checkout-price'] b, [data-test-id='price'] b, [data-test-id='price-current-price'] span, [data-test-id='product-price'] span, [data-test-id='checkout-price'] span, [data-test-id='price'] span"
+            ));
+            if (priceElement.length > 0) {
+                const normalText = await priceElement[0].getText();
+                console.log("Normal fiyat:", normalText);
+                info.price = normalText;
+            }
         }
-
         let imageUrl = "";
 
 let imageElements = await driver.findElements(By.css("img[class*='hb-HbImage-view_image']"));
