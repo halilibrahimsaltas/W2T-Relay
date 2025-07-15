@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { buildApiRequestUrl, getOfferIdFromWebsite } from './utils/link.utils';
+import { buildApiRequestUrl, getOfferIdFromWebsite, isAlreadyConvertedLink } from './utils/link.utils';
 import { createHepsiburadaAxiosInstance, generateHepsiburadaRequestBody } from './utils/hepsiburada.utils';
 
 @Injectable()
@@ -19,6 +19,13 @@ export class LinkConversionService {
                 this.logger.warn('[HATA] Boş veya geçersiz URL');
                 return 'Geçersiz URL!';
             }
+
+            if (isAlreadyConvertedLink(originalUrl)) {
+                this.logger.log('[BILGI] URL zaten dönüştürülmüş');
+                return originalUrl;
+            }
+
+
     
     
             if (originalUrl.toLowerCase().includes('hepsiburada')) {

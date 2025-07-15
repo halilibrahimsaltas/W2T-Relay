@@ -25,8 +25,15 @@ export const getOfferIdMap = (): Record<string, number> => {
 
 /**
  * URL daha önce dönüştürülmüş mü kontrol eder
- * 
  */
+
+export const isAlreadyConvertedLink = (url: string): boolean => {
+    return url.includes('sh.gelirortaklari.com') || 
+           url.includes('ty.gl') || 
+           url.includes('hb.gelirortaklari');
+};
+
+
 
 
 /**
