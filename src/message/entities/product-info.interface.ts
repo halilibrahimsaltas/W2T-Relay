@@ -3,4 +3,7 @@ export interface ProductInfo {
     price: string;
     imageUrl: string;
     pageUrl: string;
+    discountedPrice?: string;
+    bulkPrice?: string;
+    promoText?: string;
 }

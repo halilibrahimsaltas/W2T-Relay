@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { buildApiRequestUrl, getOfferIdFromWebsite, isAlreadyConvertedLink } from './utils/link.utils';
+import { buildApiRequestUrl, getOfferIdFromWebsite } from './utils/link.utils';
 import { createHepsiburadaAxiosInstance, generateHepsiburadaRequestBody } from './utils/hepsiburada.utils';
 
 @Injectable()
@@ -20,28 +20,25 @@ export class LinkConversionService {
                 return 'Geçersiz URL!';
             }
     
-            if (isAlreadyConvertedLink(originalUrl)) {
-                this.logger.log('[BILGI] URL zaten dönüştürülmüş: ' + originalUrl);
-                return originalUrl;
-            }
     
             if (originalUrl.toLowerCase().includes('hepsiburada')) {
                 this.logger.log('[BILGI] Hepsiburada linki tespit edildi, özel API kullanılacak');
                 return await this.handleHepsiburadaLink(originalUrl);
             }
     
-            const offerId = getOfferIdFromWebsite(originalUrl, this.configService);
+            const offerId = getOfferIdFromWebsite(originalUrl);
             if (offerId === -1) {
                 this.logger.warn('[UYARI] URL için uygun offer_id bulunamadı: ' + originalUrl);
                 return originalUrl;
             }
     
             const fullRequestUrl = buildApiRequestUrl(originalUrl, offerId, this.configService);
-            this.logger.debug('[DEBUG] API isteği gönderilecek tam URL: ' + fullRequestUrl);
+            this.logger.log('[BILGI] Orijinal URL: ' + originalUrl);
+            this.logger.log('[BILGI] API isteği gönderilecek tam URL: ' + fullRequestUrl);
     
             const response = await axios.get(fullRequestUrl);
-            this.logger.debug('[DEBUG] API ham yanıtı: ' + JSON.stringify(response.data));
-    
+            this.logger.log('[BILGI] API RAW RESPONSE: ' + JSON.stringify(response.data));
+            this.logger.log('[BILGI] API RESPONSE FIELD: ' + JSON.stringify(response.data?.response));
             const apiResponse = response.data?.response;
     
             if (apiResponse?.status !== 1 || !apiResponse?.data?.click_url) {
@@ -49,15 +46,18 @@ export class LinkConversionService {
                 return originalUrl;
             }
     
-            const trackingUrl = decodeURIComponent(apiResponse.data.click_url);
+            const trackingUrl = apiResponse.data.click_url;
+            console.log('[API CLICK_URL]', trackingUrl);
             this.logger.log('[BASARILI] Link dönüşümü başarılı: ' + trackingUrl);
             return trackingUrl;
     
         } catch (error) {
-            this.logger.error(`[HATA] Link dönüştürme hatası: Link zaten dönüştürülmüş veya geçersiz URL!`);
+            this.logger.error(`[HATA] Link dönüştürme hatası: ${error.message}`);
             if (error.response) {
                 this.logger.error(`[HATA] API Yanıt Detayı: ${JSON.stringify(error.response.data)}`);
-            }
+              } else {
+                this.logger.error('[HATA] API bağlantısı kurulamadı veya bilinmeyen bir hata oluştu.');
+              }
             return originalUrl;
         }
     }

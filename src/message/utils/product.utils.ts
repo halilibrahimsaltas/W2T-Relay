@@ -5,6 +5,9 @@ export interface ProductInfo {
     price: string;
     imageUrl: string;
     pageUrl: string;
+    discountedPrice?: string;
+    bulkPrice?: string;
+    promoText?: string;
 }
 
 export const getStoreName = (url: string): string => {
@@ -43,11 +46,14 @@ export const buildMessageTemplate = async (
             priceInfo = `💳 ₺ ${cleanPrice}\n`;
         }
     }
+
+    const promoText = info.promoText ? `\n🎉 ${info.promoText}` : "";
     
     const messageTemplate = `
 <b>${info.name}</b>
 
-${priceInfo}🛍 ${storeName}
+${priceInfo}🛍 ${storeName} ${promoText}
+
 
 <b>👉 <a href="${convertedLink}">FIRSATA GİT</a></b>
 
@@ -122,7 +128,34 @@ export const scrapeAmazon = async (driver: WebDriver, info: ProductInfo): Promis
 
         const priceElements = await driver.findElements(By.css("span.a-price-whole"));
         if (priceElements.length > 0) {
-            info.price = await priceElements[0].getText();
+            const priceText = await priceElements[0].getText();
+            info.price = priceText;
+
+            // Sayısal değeri çıkar
+            const numericPrice = parseFloat(priceText.replace(/[^\d.,]/g, '').replace(',', '.'));
+
+            // Promosyon kontrolü
+            const promoElements = await driver.findElements(By.css("span[class*='promoMessage'], span[id*='promoMessage']"));
+            if (promoElements.length > 0) {
+                const promoText = await promoElements[0].getText();
+
+                // 3 al 2 öde varsa uygula (öncelikli)
+                const bulkMatch = promoText.match(/3\s*al\s*2\s*öde/i);
+                if (bulkMatch) {
+                    const unitPrice = numericPrice * 2 / 3;
+                    info.bulkPrice = unitPrice.toFixed(2);
+                    info.promoText = "3 al 2 öde";
+                } else {
+                    // % indirim varsa uygula
+                    const discountMatch = promoText.match(/%(\d+)\s?indirim/i);
+                    if (discountMatch) {
+                        const discount = parseInt(discountMatch[1]);
+                        const discountedPrice = numericPrice * (1 - discount / 100);
+                        info.discountedPrice = discountedPrice.toFixed(2);
+                        info.promoText = "600₺ Üzeri %10 İndirim";
+                    }
+                }
+            }
         }
 
         const imageElements = await driver.findElements(By.css("img#landingImage, img.a-dynamic-image"));
@@ -141,6 +174,12 @@ export const scrapeAmazon = async (driver: WebDriver, info: ProductInfo): Promis
                 }
             }
             info.imageUrl = imageUrl;
+        }
+        // Eğer bulkPrice veya discountedPrice varsa, price alanını güncelle (sadece Amazon için)
+        if (info.bulkPrice) {
+            info.price = info.bulkPrice;
+        } else if (info.discountedPrice) {
+            info.price = info.discountedPrice;
         }
     } catch (error) {
         throw new Error(`Amazon ürün bilgisi çekme hatası: ${error.message}`);
