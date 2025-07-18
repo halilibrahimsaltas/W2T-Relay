@@ -173,7 +173,7 @@ export class SeleniumService implements OnModuleDestroy {
         this.logger.log('[BILGI] Okunmamış mesaj kontrol döngüsü başlatıldı...');
         while (this.isRunning) {
             try {
-                await this.openChannelsTab(); // Her döngüde sekmeyi aç
+                 
                 const channelElements = await this.driver.findElements(By.css("div[aria-label='Kanal Listesi'] div[role='listitem']"));
                 let unreadProcessed = false;
 

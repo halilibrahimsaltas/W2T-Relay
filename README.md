@@ -136,6 +136,9 @@ This project automatically monitors messages from WhatsApp Web using Selenium, s
    # Production
    npm run build
    npm run start:prod
+
+   # Or simply (Windows):
+   start-app.bat
    ```
 
 ### Frontend Installation
