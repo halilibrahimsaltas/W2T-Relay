@@ -171,9 +171,9 @@ export class SeleniumService implements OnModuleDestroy {
 
     private async monitorUnreadChannelsLoop(): Promise<void> {
         this.logger.log('[BILGI] Okunmamış mesaj kontrol döngüsü başlatıldı...');
-        await this.openChannelsTab();
         while (this.isRunning) {
             try {
+                await this.openChannelsTab(); // Her döngüde sekmeyi aç
                 const channelElements = await this.driver.findElements(By.css("div[aria-label='Kanal Listesi'] div[role='listitem']"));
                 let unreadProcessed = false;
 
@@ -215,6 +215,7 @@ export class SeleniumService implements OnModuleDestroy {
                 await new Promise(res => setTimeout(res, this.CHECK_INTERVAL));
             } catch (e) {
                 this.logger.error('[HATA] Okunmamış kanallar döngüsü hatası:', e);
+                // this.isRunning = false; // Bunu kaldır!
                 await new Promise(res => setTimeout(res, this.CHECK_INTERVAL));
             }
         }
@@ -240,6 +241,8 @@ export class SeleniumService implements OnModuleDestroy {
             await this.driver.executeScript("arguments[0].click();", channel);
         }
         await this.driver.wait(until.elementLocated(By.css("div[role='application']")), 3000);
+
+    
     }
 
     // Kanal ismi alma fonksiyonu (stub)
@@ -279,21 +282,36 @@ export class SeleniumService implements OnModuleDestroy {
         const startIndex = Math.max(0, messages.length - 2);
         const lastThreeMessages = messages.slice(startIndex, messages.length);
 
-        for (const message of lastThreeMessages) {
-            try {
-                const msgType = await this.determineMessageType(message);
-                if (msgType === "text") {
-                    const textElement = await message.findElement(By.css("span.selectable-text"));
-                    const msgContent = await textElement.getText();
-                    const sender = await this.getSenderFromMessage(message);
+        for (let i = startIndex; i < messages.length; i++) {
+            let retry = 0;
+            while (retry < 2) {
+                try {
+                    const currentMessages = await this.driver.findElements(By.css("div[role='row']"));
+                    if (i >= currentMessages.length) {
+                        this.logger.warn(`[UYARI] Mesaj indexi güncel mesaj sayısından büyük: i=${i}, length=${currentMessages.length}`);
+                        break;
+                    }
+                    const message = currentMessages[i];
+                    const msgType = await this.determineMessageType(message);
+                    if (msgType === "text") {
+                        const textElement = await message.findElement(By.css("span.selectable-text"));
+                        const msgContent = await textElement.getText();
+                        const sender = await this.getSenderFromMessage(message);
 
-                    await this.processIncomingMessage(
-                        msgContent,
-                        sender ? sender : channelName
-                    );
-                }
-            } catch (e) {
+                        await this.processIncomingMessage(
+                            msgContent,
+                            sender ? sender : channelName
+                        );
+                        break; // başarılıysa döngüden çık
+                    }
+                } catch (e) {
+                    if (e.name === 'StaleElementReferenceError') {
+                        retry++;
+                        continue; // tekrar dene
+                    }
                     this.logger.error("[HATA] Mesaj işleme hatası: ", e);
+                    break;
+                }
             }
         }
             
